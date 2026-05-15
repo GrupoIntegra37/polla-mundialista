@@ -329,28 +329,58 @@ async function renderStats(){
 function renderCorreos(){
   const cont=document.getElementById('correos-list');
   if(correos.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Sin correos habilitados aún.</div>';return;}
-  cont.innerHTML=correos.map(e=>`<div class="correo-chip">${e}<span class="chip-remove" onclick="removeCorreo('${e}')">×</span></div>`).join('');
+  cont.innerHTML=`<div style="font-size:12px;color:var(--g600);margin-bottom:8px">Total: <strong>${correos.length}</strong> correos habilitados</div>`+correos.map(e=>`<div class="correo-chip">${e}<span class="chip-remove" onclick="removeCorreo('${e}')">×</span></div>`).join('');
 }
 async function addCorreo(){
   const inp=document.getElementById('nuevo-correo');
   const email=inp.value.trim().toLowerCase();
   if(!email||!email.includes('@')){alert('Ingresa un correo válido.');return;}
   if(correos.includes(email)){alert('Ya está en la lista.');return;}
-  await sb.from('correos_habilitados').insert({email});
+  const {error}=await sb.from('correos_habilitados').insert({email});
+  if(error){alert('Error al guardar: '+error.message);return;}
   correos.push(email);renderCorreos();renderStats();inp.value='';
 }
 async function addBulk(){
   const txt=document.getElementById('bulk-correos').value;
-  const lines=txt.split('\n').map(l=>l.trim().toLowerCase()).filter(l=>l.includes('@')&&!correos.includes(l));
-  if(lines.length===0){alert('No hay correos nuevos para agregar.');return;}
-  await sb.from('correos_habilitados').insert(lines.map(e=>({email:e})));
-  correos.push(...lines);renderCorreos();renderStats();
+  const lines=txt.split('\n')
+    .map(l=>l.trim().toLowerCase())
+    .filter(l=>l.includes('@')&&l.includes('.')&&!correos.includes(l));
+  if(lines.length===0){alert('No hay correos nuevos válidos para agregar.');return;}
+
+  const btn=document.querySelector('[onclick="addBulk()"]');
+  btn.disabled=true;btn.textContent='Guardando...';
+
+  // Insertar en lotes de 50 para no exceder límites de Supabase
+  const LOTE=50;
+  let guardados=0;
+  let errores=0;
+  for(let i=0;i<lines.length;i+=LOTE){
+    const lote=lines.slice(i,i+LOTE);
+    const {error}=await sb.from('correos_habilitados').insert(lote.map(e=>({email:e})));
+    if(error){
+      // intentar uno a uno si falla el lote (puede haber duplicados)
+      for(const email of lote){
+        const {error:e2}=await sb.from('correos_habilitados').insert({email});
+        if(!e2){correos.push(email);guardados++;}
+        else errores++;
+      }
+    } else {
+      correos.push(...lote);guardados+=lote.length;
+    }
+    btn.textContent=`Guardando... ${Math.min(i+LOTE,lines.length)}/${lines.length}`;
+  }
+
+  renderCorreos();renderStats();
   document.getElementById('bulk-correos').value='';
-  alert(`✅ ${lines.length} correos agregados.`);
+  btn.disabled=false;btn.textContent='Importar lista';
+
+  if(errores>0) alert(`✅ ${guardados} correos guardados.\n⚠️ ${errores} no se pudieron guardar (posiblemente duplicados).`);
+  else alert(`✅ ${guardados} correos guardados correctamente en Supabase.`);
 }
 async function removeCorreo(email){
   if(!confirm(`¿Eliminar ${email}?`))return;
-  await sb.from('correos_habilitados').delete().eq('email',email);
+  const {error}=await sb.from('correos_habilitados').delete().eq('email',email);
+  if(error){alert('Error al eliminar: '+error.message);return;}
   correos=correos.filter(c=>c!==email);renderCorreos();renderStats();
 }
 
