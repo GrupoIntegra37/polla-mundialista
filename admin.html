@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Polla Mundialista 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--red:#C0001A;--red-dark:#8B0012;--red-light:#FFF0F0;--white:#fff;--g50:#F8F8F8;--g100:#F0F0F0;--g200:#E0E0E0;--g400:#9E9E9E;--g600:#616161;--g900:#1A1A1A;}
+body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--g900);min-height:100vh}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+.auth-bg{min-height:100vh;background:linear-gradient(160deg,#3A0008 0%,#8B0012 50%,#C0001A 100%);display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{background:white;width:100%;max-width:380px;border-radius:20px;padding:36px;box-shadow:0 24px 64px rgba(0,0,0,0.3)}
+.auth-title{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red);text-align:center;margin-bottom:6px;letter-spacing:1px}
+.auth-sub{font-size:13px;color:var(--g600);text-align:center;margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:13px;font-weight:600;color:var(--g600);margin-bottom:7px}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--g200);border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;background:#fff;color:var(--g900);outline:none;transition:border-color 0.2s}
+.form-input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,0,26,0.09)}
+.form-input::placeholder{color:#BDBDBD}
+.btn-primary{width:100%;padding:13px;background:var(--red);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.2s}
+.btn-primary:hover{background:var(--red-dark)}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
+.msg{font-size:13px;padding:11px 14px;border-radius:9px;margin-bottom:14px;text-align:center}
+.msg.error{background:#FFEBEB;color:#B71C1C;border:1px solid #FFCDD2}
+.msg.success{background:#E8F5E9;color:#1B5E20;border:1px solid #C8E6C9}
+.msg.info{background:#E3F2FD;color:#0D47A1;border:1px solid #BBDEFB}
+
+/* HEADER */
+.admin-header{background:var(--red-dark);padding:0 24px;height:64px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.admin-header-logo{width:40px;height:40px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px dashed rgba(255,255,255,0.3)}
+.admin-header-logo img{width:100%;height:100%;object-fit:contain}
+.admin-header-title{font-family:'Bebas Neue',sans-serif;color:white;font-size:20px;letter-spacing:1px;flex:1}
+.admin-nav{display:flex;gap:6px}
+.anav{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.anav:hover{background:rgba(255,255,255,0.2)}
+.anav.active{background:white;color:var(--red-dark);font-weight:600}
+
+/* CONTENT */
+.content{padding:20px;max-width:1000px;margin:0 auto;width:100%;flex:1}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red);border-bottom:2px solid var(--red-light);padding-bottom:8px;margin-bottom:18px;letter-spacing:0.5px}
+.card{background:white;border-radius:14px;border:1px solid var(--g200);padding:20px;margin-bottom:16px}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-box{background:white;border:1px solid var(--g200);border-radius:12px;padding:16px;text-align:center}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--red);line-height:1}
+.stat-label{font-size:12px;color:var(--g600);margin-top:4px;font-weight:500}
+
+/* CORREOS */
+.correo-chip{display:inline-flex;align-items:center;gap:6px;background:var(--red-light);color:var(--red-dark);padding:5px 12px;border-radius:20px;font-size:13px;margin:4px;border:1px solid #FFCDD2}
+.chip-remove{cursor:pointer;font-weight:700;opacity:0.6;font-size:16px;line-height:1}
+.chip-remove:hover{opacity:1}
+
+/* PARTICIPANTES */
+.part-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--g100)}
+.part-row:last-child{border-bottom:none}
+.part-name{font-weight:600;font-size:14px}
+.part-meta{font-size:12px;color:var(--g400);margin-top:2px}
+
+/* PARTIDOS */
+.partido-admin{background:white;border:1px solid var(--g200);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.team-col-admin{display:flex;align-items:center;gap:8px}
+.team-col-admin.right{flex-direction:row-reverse}
+.team-flag-admin{font-size:22px}
+.team-name-admin{font-size:13px;font-weight:600}
+.admin-score-center{display:flex;flex-direction:column;align-items:center;gap:8px}
+.score-inputs-admin{display:flex;align-items:center;gap:6px}
+.score-input-admin{width:48px;height:48px;text-align:center;font-size:20px;font-weight:700;border:2px solid var(--g200);border-radius:9px;font-family:'DM Sans',sans-serif;background:#fff;color:var(--g900)}
+.score-input-admin:focus{border-color:var(--red);outline:none}
+.score-input-admin::-webkit-inner-spin-button{-webkit-appearance:none}
+.score-sep{font-size:22px;font-weight:700;color:var(--g400)}
+.partido-meta{font-size:11px;color:var(--g400);text-align:center}
+.resultado-badge{background:var(--red-light);color:var(--red-dark);font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px}
+.admin-btns{display:flex;gap:6px;justify-content:center}
+
+/* BUTTONS */
+.btn-sm{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;transition:all 0.2s}
+.btn-red{background:var(--red);color:white}
+.btn-red:hover{background:var(--red-dark)}
+.btn-ghost{background:var(--g100);color:var(--g600);border:1px solid var(--g200)}
+.btn-ghost:hover{background:var(--g200)}
+.btn-green{background:#2E7D32;color:white}
+.btn-green:hover{background:#1B5E20}
+
+/* FASE TABS */
+.fase-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.fase-tab{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--g200);background:white;color:var(--g600);font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.fase-tab.active{background:var(--red);color:white;border-color:var(--red)}
+
+/* CAMPEON BOX */
+.campeon-box{background:linear-gradient(135deg,var(--red-dark),var(--red));border-radius:12px;padding:16px 20px;color:white;display:flex;align-items:center;gap:14px;margin-top:10px}
+.campeon-box .flag{font-size:28px}
+.campeon-box .name{font-size:18px;font-weight:700;flex:1}
+
+/* TABLA */
+.tabla{width:100%;border-collapse:collapse;font-size:14px}
+.tabla th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--g400);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--g100)}
+.tabla td{padding:11px 12px;border-bottom:1px solid var(--g100)}
+.rank-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin:0 auto}
+.r1{background:#FFD700;color:#5D4000}.r2{background:#C0C0C0;color:#333}.r3{background:#CD7F32;color:#fff}.rn{background:var(--g100);color:var(--g600)}
+.pts-pill{background:var(--red-light);color:var(--red-dark);font-weight:700;padding:4px 12px;border-radius:20px;font-size:13px;display:inline-block}
+
+/* LOGO UPLOAD */
+.logo-upload-area{border:2px dashed var(--g200);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;background:var(--g50)}
+.logo-upload-area:hover{border-color:var(--red)}
+.logo-preview{width:100px;height:100px;object-fit:contain;border-radius:8px;margin:0 auto 10px;display:block}
+
+.loading{text-align:center;padding:32px;color:var(--g400);font-size:14px}
+.spinner{width:28px;height:28px;border:3px solid var(--g200);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+select.form-input{cursor:pointer}
+textarea.form-input{resize:vertical;min-height:80px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN ADMIN -->
+<div class="screen active" id="screen-login">
+<div class="auth-bg">
+<div class="auth-card">
+  <div class="auth-title">🔐 Panel Administrador</div>
+  <div class="auth-sub">Polla Mundialista · Grupo Integra Seguros 2026</div>
+  <div id="admin-msg"></div>
+  <div class="form-group">
+    <label class="form-label">Correo administrador</label>
+    <input type="email" class="form-input" id="admin-email" placeholder="nicolas.pinilla@grupointegra.com.co" onkeydown="if(event.key==='Enter')doAdminLogin()">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Contraseña</label>
+    <input type="password" class="form-input" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
+  </div>
+  <button class="btn-primary" id="login-btn" onclick="doAdminLogin()">Acceder</button>
+</div>
+</div>
+</div>
+
+<!-- PANEL ADMIN -->
+<div class="screen" id="screen-admin">
+  <div class="admin-header">
+    <div class="admin-header-logo" id="admin-logo-box" onclick="document.getElementById('logo-file').click()">
+      <img id="admin-logo-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:contain">
+      <span id="admin-logo-icon" style="font-size:18px;color:white">🏢</span>
+    </div>
+    <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="subirLogo(this)">
+    <div class="admin-header-title">Admin · Polla Mundialista 2026</div>
+    <div class="admin-nav">
+      <button class="anav active" id="anav-participantes" onclick="setAdminTab('participantes')">Participantes</button>
+      <button class="anav" id="anav-partidos" onclick="setAdminTab('partidos')">Partidos</button>
+      <button class="anav" id="anav-campeon" onclick="setAdminTab('campeon')">Campeón</button>
+      <button class="anav" id="anav-tabla" onclick="setAdminTab('tabla')">Tabla</button>
+      <button class="anav" onclick="doAdminLogout()">Salir</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- PARTICIPANTES -->
+    <div id="apane-participantes">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="card">
+        <div class="section-title">Correos habilitados</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="email" class="form-input" id="nuevo-correo" placeholder="correo@intermediario.com" style="flex:1" onkeydown="if(event.key==='Enter')addCorreo()">
+          <button class="btn-sm btn-red" onclick="addCorreo()">+ Agregar</button>
+        </div>
+        <div style="font-size:12px;color:var(--g600);margin-bottom:6px">O importa una lista (un correo por línea):</div>
+        <textarea class="form-input" id="bulk-correos" rows="4" placeholder="correo1@empresa.com&#10;correo2@empresa.com"></textarea>
+        <button class="btn-sm btn-red" onclick="addBulk()" style="margin-top:8px">Importar lista</button>
+        <div id="correos-list" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Participantes registrados</div>
+        <div id="participantes-list"></div>
+      </div>
+    </div>
+
+    <!-- PARTIDOS -->
+    <div id="apane-partidos" style="display:none">
+      <div class="card">
+        <div class="section-title">Gestión de resultados</div>
+        <div class="fase-tabs" id="fase-tabs-admin"></div>
+        <div id="partidos-admin-list"></div>
+      </div>
+    </div>
+
+    <!-- CAMPEÓN -->
+    <div id="apane-campeon" style="display:none">
+      <div class="card">
+        <div class="section-title">Campeón Mundial Real</div>
+        <div style="font-size:14px;color:var(--g600);margin-bottom:14px">Registra el equipo campeón para calcular los puntos bonus de 10 pts.</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="form-input" id="campeon-real-select" style="flex:1"></select>
+          <button class="btn-sm btn-green" onclick="guardarCampeonReal()">Guardar</button>
+        </div>
+        <div id="campeon-real-display" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Logo de la empresa</div>
+        <div class="logo-upload-area" onclick="document.getElementById('logo-file2').click()">
+          <img id="logo-preview" class="logo-preview" src="" alt="" style="display:none">
+          <div id="logo-upload-text">
+            <div style="font-size:32px;margin-bottom:8px">📷</div>
+            <div style="font-size:14px;font-weight:600;color:var(--g600)">Clic para subir el logo</div>
+            <div style="font-size:12px;color:var(--g400);margin-top:4px">PNG, JPG o SVG recomendado</div>
+          </div>
+        </div>
+        <input type="file" id="logo-file2" accept="image/*" style="display:none" onchange="subirLogo(this)">
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <div id="apane-tabla" style="display:none">
+      <div class="card">
+        <div class="section-title">Tabla general de posiciones</div>
+        <div id="tabla-admin-container"><div class="loading"><div class="spinner"></div>Calculando...</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://rpunkeizmrddhkbowdur.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwdW5rZWl6bXJkZGhrYm93ZHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3OTUxNDcsImV4cCI6MjA5NDM3MTE0N30.12MFTFA7c2gNGMvFTAFdYK38-kCkvXPqVppxpqdCt14';
+const ADMIN_EMAIL='nicolas.pinilla@grupointegra.com.co';
+const ADMIN_PASS='GrupoIntegra@2026!';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const TODOS_PAISES=[
+  {id:'MEX',n:'México',f:'🇲🇽'},{id:'USA',n:'Estados Unidos',f:'🇺🇸'},{id:'CAN',n:'Canadá',f:'🇨🇦'},{id:'SLO',n:'Eslovenia',f:'🇸🇮'},
+  {id:'ARG',n:'Argentina',f:'🇦🇷'},{id:'COL',n:'Colombia',f:'🇨🇴'},{id:'ECU',n:'Ecuador',f:'🇪🇨'},{id:'CHI',n:'Chile',f:'🇨🇱'},
+  {id:'BRA',n:'Brasil',f:'🇧🇷'},{id:'URU',n:'Uruguay',f:'🇺🇾'},{id:'PAR',n:'Paraguay',f:'🇵🇾'},{id:'VEN',n:'Venezuela',f:'🇻🇪'},
+  {id:'ENG',n:'Inglaterra',f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},{id:'GER',n:'Alemania',f:'🇩🇪'},{id:'NED',n:'Países Bajos',f:'🇳🇱'},{id:'DEN',n:'Dinamarca',f:'🇩🇰'},
+  {id:'FRA',n:'Francia',f:'🇫🇷'},{id:'BEL',n:'Bélgica',f:'🇧🇪'},{id:'SWI',n:'Suiza',f:'🇨🇭'},{id:'SCO',n:'Escocia',f:'🏴󠁧󠁢󠁳󠁣󠁴󠁿'},
+  {id:'ESP',n:'España',f:'🇪🇸'},{id:'POR',n:'Portugal',f:'🇵🇹'},{id:'TUR',n:'Turquía',f:'🇹🇷'},{id:'GEO',n:'Georgia',f:'🇬🇪'},
+  {id:'MOR',n:'Marruecos',f:'🇲🇦'},{id:'SEN',n:'Senegal',f:'🇸🇳'},{id:'EGY',n:'Egipto',f:'🇪🇬'},{id:'CMR',n:'Camerún',f:'🇨🇲'},
+  {id:'JPN',n:'Japón',f:'🇯🇵'},{id:'KOR',n:'Corea del Sur',f:'🇰🇷'},{id:'AUS',n:'Australia',f:'🇦🇺'},{id:'IRQ',n:'Irak',f:'🇮🇶'},
+  {id:'SER',n:'Serbia',f:'🇷🇸'},{id:'CRO',n:'Croacia',f:'🇭🇷'},{id:'UKR',n:'Ucrania',f:'🇺🇦'},{id:'ALB',n:'Albania',f:'🇦🇱'},
+  {id:'SAU',n:'Arabia Saudita',f:'🇸🇦'},{id:'IRN',n:'Irán',f:'🇮🇷'},{id:'UZB',n:'Uzbekistán',f:'🇺🇿'},{id:'KAZ',n:'Kazajistán',f:'🇰🇿'},
+  {id:'NIG',n:'Nigeria',f:'🇳🇬'},{id:'GHA',n:'Ghana',f:'🇬🇭'},{id:'CIV',n:'Costa de Marfil',f:'🇨🇮'},{id:'TAN',n:'Tanzania',f:'🇹🇿'},
+  {id:'PAN',n:'Panamá',f:'🇵🇦'},{id:'HON',n:'Honduras',f:'🇭🇳'},{id:'MEX2',n:'Rep. Dominicana',f:'🇩🇴'},{id:'JAM',n:'Jamaica',f:'🇯🇲'}
+];
+function getPais(id){return TODOS_PAISES.find(p=>p.id===id)||{id,n:id,f:'⚽'};}
+
+let partidosDB=[];
+let correos=[];
+let currentAdminFase='grupos_A';
+
+// LOGIN
+async function doAdminLogin(){
+  const email=document.getElementById('admin-email').value.trim().toLowerCase();
+  const pass=document.getElementById('admin-pass').value;
+  const msgEl=document.getElementById('admin-msg');
+  const btn=document.getElementById('login-btn');
+  if(email!==ADMIN_EMAIL||pass!==ADMIN_PASS){
+    msgEl.innerHTML='<div class="msg error">Credenciales incorrectas.</div>';return;
+  }
+  btn.disabled=true;btn.textContent='Cargando...';
+  await cargarTodo();
+  showScreen('screen-admin');
+  btn.disabled=false;btn.textContent='Acceder';
+}
+function doAdminLogout(){
+  document.getElementById('admin-email').value='';
+  document.getElementById('admin-pass').value='';
+  document.getElementById('admin-msg').innerHTML='';
+  showScreen('screen-login');
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+async function cargarTodo(){
+  const [{data:p},{data:c},{data:cfg}]=await Promise.all([
+    sb.from('partidos').select('*'),
+    sb.from('correos_habilitados').select('*'),
+    sb.from('config').select('*').eq('id',1).single()
+  ]);
+  partidosDB=p||[];
+  correos=(c||[]).map(x=>x.email);
+  if(cfg?.logo_url) applyLogo(cfg.logo_url);
+  renderStats();
+  renderCorreos();
+  renderParticipantes();
+  renderFaseTabsAdmin();
+  renderPartidosAdmin();
+  renderCampeonRealDisplay();
+  populateCampeonSelect();
+}
+
+function applyLogo(url){
+  ['admin-logo-img'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.src=url;el.style.display='block';
+  });
+  document.getElementById('admin-logo-icon').style.display='none';
+  const prev=document.getElementById('logo-preview');
+  if(prev){prev.src=url;prev.style.display='block';}
+  document.getElementById('logo-upload-text').style.display='none';
+}
+
+// TABS
+function setAdminTab(tab){
+  ['participantes','partidos','campeon','tabla'].forEach(t=>{
+    document.getElementById(`apane-${t}`).style.display=t===tab?'block':'none';
+    document.getElementById(`anav-${t}`).classList.toggle('active',t===tab);
+  });
+  if(tab==='tabla') renderTablaAdmin();
+}
+
+// STATS
+async function renderStats(){
+  const {data:parts}=await sb.from('participantes').select('id',{count:'exact'});
+  const jugados=partidosDB.filter(p=>p.res_local!==null&&p.res_local!==undefined).length;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-box"><div class="stat-num">${(parts||[]).length}</div><div class="stat-label">Participantes</div></div>
+    <div class="stat-box"><div class="stat-num">${correos.length}</div><div class="stat-label">Correos habilitados</div></div>
+    <div class="stat-box"><div class="stat-num">${jugados}</div><div class="stat-label">Partidos jugados</div></div>
+    <div class="stat-box"><div class="stat-num">${partidosDB.length}</div><div class="stat-label">Total partidos</div></div>`;
+}
+
+// CORREOS
+function renderCorreos(){
+  const cont=document.getElementById('correos-list');
+  if(correos.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Sin correos habilitados aún.</div>';return;}
+  cont.innerHTML=correos.map(e=>`<div class="correo-chip">${e}<span class="chip-remove" onclick="removeCorreo('${e}')">×</span></div>`).join('');
+}
+async function addCorreo(){
+  const inp=document.getElementById('nuevo-correo');
+  const email=inp.value.trim().toLowerCase();
+  if(!email||!email.includes('@')){alert('Ingresa un correo válido.');return;}
+  if(correos.includes(email)){alert('Ya está en la lista.');return;}
+  await sb.from('correos_habilitados').insert({email});
+  correos.push(email);renderCorreos();renderStats();inp.value='';
+}
+async function addBulk(){
+  const txt=document.getElementById('bulk-correos').value;
+  const lines=txt.split('\n').map(l=>l.trim().toLowerCase()).filter(l=>l.includes('@')&&!correos.includes(l));
+  if(lines.length===0){alert('No hay correos nuevos para agregar.');return;}
+  await sb.from('correos_habilitados').insert(lines.map(e=>({email:e})));
+  correos.push(...lines);renderCorreos();renderStats();
+  document.getElementById('bulk-correos').value='';
+  alert(`✅ ${lines.length} correos agregados.`);
+}
+async function removeCorreo(email){
+  if(!confirm(`¿Eliminar ${email}?`))return;
+  await sb.from('correos_habilitados').delete().eq('email',email);
+  correos=correos.filter(c=>c!==email);renderCorreos();renderStats();
+}
+
+// PARTICIPANTES
+async function renderParticipantes(){
+  const {data}=await sb.from('participantes').select('*').order('created_at',{ascending:false});
+  const cont=document.getElementById('participantes-list');
+  if(!data||data.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Nadie se ha registrado aún.</div>';return;}
+  cont.innerHTML=data.map(p=>`<div class="part-row">
+    <div><div class="part-name">${p.nombre}</div><div class="part-meta">${p.email} · ${p.agencia}</div></div>
+    <div style="font-size:11px;color:var(--g400)">${p.created_at?new Date(p.created_at).toLocaleDateString('es-CO'):''}</div>
+  </div>`).join('');
+}
+
+// PARTIDOS
+const FASES_ADMIN=[
+  {id:'grupos_A',label:'Grupo A'},{id:'grupos_B',label:'Grupo B'},{id:'grupos_C',label:'Grupo C'},
+  {id:'grupos_D',label:'Grupo D'},{id:'grupos_E',label:'Grupo E'},{id:'grupos_F',label:'Grupo F'},
+  {id:'grupos_G',label:'Grupo G'},{id:'grupos_H',label:'Grupo H'},{id:'grupos_I',label:'Grupo I'},
+  {id:'grupos_J',label:'Grupo J'},{id:'grupos_K',label:'Grupo K'},{id:'grupos_L',label:'Grupo L'},
+  {id:'octavos',label:'Octavos'},{id:'cuartos',label:'Cuartos'},{id:'semifinal',label:'Semifinal'},{id:'final',label:'Final'}
+];
+
+function renderFaseTabsAdmin(){
+  document.getElementById('fase-tabs-admin').innerHTML=FASES_ADMIN.map(f=>`<button class="fase-tab${f.id===currentAdminFase?' active':''}" onclick="setAdminFase('${f.id}')">${f.label}</button>`).join('');
+}
+function setAdminFase(fase){
+  currentAdminFase=fase;
+  document.querySelectorAll('.fase-tab').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderPartidosAdmin();
+}
+
+function renderPartidosAdmin(){
+  let partidos;
+  if(currentAdminFase.startsWith('grupos_')){
+    const letra=currentAdminFase.replace('grupos_','');
+    partidos=partidosDB.filter(p=>p.grupo===letra);
+  } else {
+    partidos=partidosDB.filter(p=>p.fase===currentAdminFase);
+  }
+  const cont=document.getElementById('partidos-admin-list');
+  if(!partidos||partidos.length===0){cont.innerHTML='<div class="msg info">No hay partidos en esta fase.</div>';return;}
+  cont.innerHTML=partidos.map(p=>{
+    const lEq=getPais(p.local),vEq=getPais(p.visit);
+    const tieneRes=p.res_local!==null&&p.res_local!==undefined;
+    return `<div class="partido-admin">
+      <div class="team-col-admin"><span class="team-flag-admin">${lEq.f}</span><span class="team-name-admin">${lEq.n}</span></div>
+      <div class="admin-score-center">
+        <div class="partido-meta">${p.fecha} · ${p.hora}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--g600);margin-bottom:2px">Resultado real</div>
+        <div class="score-inputs-admin">
+          <input type="number" class="score-input-admin" min="0" max="20" value="${tieneRes?p.res_local:''}" placeholder="?" id="ar_${p.id}_l">
+          <span class="score-sep">–</span>
+          <input type="number" class="score-input-admin" min="0" max="20" value="${tieneRes?p.res_visit:''}" placeholder="?" id="ar_${p.id}_v">
+        </div>
+        ${tieneRes?`<div class="resultado-badge">Registrado: ${p.res_local}–${p.res_visit}</div>`:''}
+        <div class="admin-btns">
+          <button class="btn-sm btn-red" onclick="guardarResultado('${p.id}')">Guardar</button>
+          <button class="btn-sm btn-ghost" onclick="toggleBloqueo('${p.id}')">${p.bloqueado?'🔒 Desbloquear':'Bloquear'}</button>
+        </div>
+      </div>
+      <div class="team-col-admin right"><span class="team-name-admin">${vEq.n}</span><span class="team-flag-admin">${vEq.f}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function guardarResultado(pid){
+  const l=document.getElementById(`ar_${pid}_l`);
+  const v=document.getElementById(`ar_${pid}_v`);
+  if(!l||!v||l.value===''||v.value===''){alert('Ingresa ambos marcadores.');return;}
+  const rl=parseInt(l.value),rv=parseInt(v.value);
+  await sb.from('partidos').update({res_local:rl,res_visit:rv,bloqueado:true}).eq('id',pid);
+  const p=partidosDB.find(x=>x.id===pid);
+  if(p){p.res_local=rl;p.res_visit=rv;p.bloqueado=true;}
+  renderPartidosAdmin();renderStats();
+  alert('✅ Resultado guardado correctamente.');
+}
+
+async function toggleBloqueo(pid){
+  const p=partidosDB.find(x=>x.id===pid);if(!p)return;
+  p.bloqueado=!p.bloqueado;
+  await sb.from('partidos').update({bloqueado:p.bloqueado}).eq('id',pid);
+  renderPartidosAdmin();
+}
+
+// CAMPEÓN REAL
+function populateCampeonSelect(){
+  const sel=document.getElementById('campeon-real-select');if(!sel)return;
+  sel.innerHTML='<option value="">-- Selecciona el campeón real --</option>'+TODOS_PAISES.map(p=>`<option value="${p.id}">${p.f} ${p.n}</option>`).join('');
+}
+async function guardarCampeonReal(){
+  const val=document.getElementById('campeon-real-select').value;
+  if(!val){alert('Selecciona un equipo.');return;}
+  await sb.from('campeon').upsert({id:1,real:val});
+  renderCampeonRealDisplay(val);
+  alert('✅ Campeón registrado. Los puntos se actualizarán en la tabla.');
+}
+async function renderCampeonRealDisplay(val){
+  if(!val){
+    const {data}=await sb.from('campeon').select('real').eq('id',1).single();
+    val=data?.real;
+  }
+  const cont=document.getElementById('campeon-real-display');
+  if(val){
+    const eq=getPais(val);
+    cont.innerHTML=`<div class="campeon-box"><span class="flag">${eq.f}</span><span class="name">${eq.n}</span><span style="font-size:12px;opacity:0.8">Campeón registrado ✓</span></div>`;
+  } else {
+    cont.innerHTML='<div style="color:var(--g400);font-size:13px;margin-top:8px">No hay campeón registrado aún.</div>';
+  }
+}
+
+// LOGO
+async function subirLogo(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    const url=e.target.result;
+    await sb.from('config').update({logo_url:url}).eq('id',1);
+    applyLogo(url);
+    alert('✅ Logo guardado correctamente.');
+  };
+  reader.readAsDataURL(file);
+}
+
+// TABLA ADMIN
+async function renderTablaAdmin(){
+  const cont=document.getElementById('tabla-admin-container');
+  cont.innerHTML='<div class="loading"><div class="spinner"></div>Calculando...</div>';
+  const [{data:parts},{data:prons},{data:campDB},{data:partsDB}]=await Promise.all([
+    sb.from('participantes').select('*'),
+    sb.from('pronosticos').select('*'),
+    sb.from('campeon').select('real').eq('id',1).single(),
+    sb.from('partidos').select('*')
+  ]);
+  const campeonReal=campDB?.real||null;
+  const puntos={};
+  (parts||[]).forEach(p=>{puntos[p.email]={nombre:p.nombre,agencia:p.agencia,total:0,exact:0,campeon:false};});
+  (partsDB||[]).filter(p=>p.res_local!==null&&p.res_local!==undefined).forEach(partido=>{
+    const rl=partido.res_local,rv=partido.res_visit;
+    const rr=rl>rv?'L':rv>rl?'V':'E';
+    (prons||[]).filter(pr=>pr.partido_id===partido.id).forEach(pr=>{
+      if(!puntos[pr.email])return;
+      const pl=parseInt(pr.local),pv=parseInt(pr.visit);
+      if(isNaN(pl)||isNaN(pv))return;
+      const rp=pl>pv?'L':pv>pl?'V':'E';
+      if(pl===rl&&pv===rv){puntos[pr.email].total+=3;puntos[pr.email].exact++;}
+      else if(rp===rr){puntos[pr.email].total+=1;}
+    });
+  });
+  if(campeonReal){
+    (prons||[]).filter(pr=>pr.partido_id==='campeon').forEach(pr=>{
+      if(!puntos[pr.email])return;
+      if(pr.local===campeonReal){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
+    });
+  }
+  const sorted=Object.entries(puntos).map(([email,d])=>({email,...d})).sort((a,b)=>b.total-a.total||b.exact-a.exact);
+  if(sorted.length===0){cont.innerHTML='<div class="msg info">No hay participantes aún.</div>';return;}
+  cont.innerHTML=`<table class="tabla">
+    <thead><tr><th style="width:36px;text-align:center">#</th><th>Participante</th><th>Agencia</th><th style="text-align:center">Exactos</th><th style="text-align:center">Campeón</th><th style="text-align:center">Puntos</th></tr></thead>
+    <tbody>${sorted.map((p,i)=>{
+      const rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
+      return `<tr><td><div class="rank-circle ${rc}">${i+1}</div></td>
+        <td><div style="font-weight:600">${p.nombre}</div><div style="font-size:12px;color:var(--g400)">${p.email}</div></td>
+        <td style="font-size:13px;color:var(--g600)">${p.agencia||'-'}</td>
+        <td style="text-align:center">${p.exact}🎯</td>
+        <td style="text-align:center">${p.campeon?'⭐ Sí':'-'}</td>
+        <td style="text-align:center"><span class="pts-pill">${p.total}</span></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+</script>
+</body>
+</html>
