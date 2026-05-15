@@ -751,19 +751,27 @@ async function confirmarGuardarGrupo(letra){
   cerrarModal();
   const partidos = partidosDB.filter(p=>p.grupo===letra);
   const upserts = [];
-  let completo = true;
+  let sinPronóstico = [];
 
   partidos.forEach(p=>{
     const l=document.getElementById(`sc_${p.id}_l`);
     const v=document.getElementById(`sc_${p.id}_v`);
-    if(!l||!v||l.value===''||v.value===''){completo=false;return;}
-    pronosticos[p.id]={local:parseInt(l.value), visit:parseInt(v.value)};
-    upserts.push({email:currentUser.email, partido_id:p.id, local:parseInt(l.value), visit:parseInt(v.value)});
+    // Si ambos campos tienen valor los guardamos
+    if(l&&v&&l.value!==''&&v.value!==''){
+      pronosticos[p.id]={local:parseInt(l.value), visit:parseInt(v.value)};
+      upserts.push({email:currentUser.email, partido_id:p.id, local:parseInt(l.value), visit:parseInt(v.value)});
+    } else {
+      // Partido sin pronóstico — lo registramos pero no lo contamos como error
+      sinPronóstico.push(`${p.local} vs ${p.visit}`);
+    }
   });
 
-  if(!completo){
-    alert('Completa todos los marcadores del grupo antes de guardar.');
-    return;
+  // Advertir si hay partidos sin pronóstico antes de bloquear
+  if(sinPronóstico.length>0){
+    const confirmar = confirm(
+      `⚠️ Los siguientes partidos quedarán SIN pronóstico:\n\n${sinPronóstico.join('\n')}\n\nEstos partidos no sumarán puntos. ¿Deseas guardar de todas formas?`
+    );
+    if(!confirmar) return;
   }
 
   if(upserts.length>0){
