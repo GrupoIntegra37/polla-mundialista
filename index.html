@@ -128,6 +128,9 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
 
 /* LOADING */
 .loading{text-align:center;padding:48px;color:var(--gray-400);font-size:14px}
+.partido-completo{border-left:4px solid #2E7D32 !important;background:#F9FFF9}
+.partido-completo .score-input{border-color:#A5D6A7 !important;background:#F1FFF1}
+.completado-tag{display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#1B5E20;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:3px;border:1px solid #C8E6C9}
 .spinner{width:32px;height:32px;border:3px solid var(--gray-200);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -614,11 +617,20 @@ function renderGrupoCard(letra){
 
   const paisesHtml = grupo.paises.map(p=>`<div class="pais-chip"><span class="flag">${p.f}</span><span>${p.n}</span></div>`).join('');
 
+  // Contar pronósticos completos en el grupo
+  const totalPartidos = partidos.length;
+  const completados = partidos.filter(p=>{
+    const pron=pronosticos[p.id]||{};
+    return pron.local!==undefined&&pron.local!==null&&pron.visit!==undefined&&pron.visit!==null;
+  }).length;
+
   let statusHtml = '';
   if(bloqueado){
     statusHtml = '<span class="badge-guardado">🔒 Cerrado</span>';
-  } else if(tieneAlgunPron){
-    statusHtml = '<span class="badge-pendiente">Incompleto</span>';
+  } else if(completados===totalPartidos && totalPartidos>0){
+    statusHtml = `<span class="badge-guardado">✓ ${completados}/${totalPartidos} completos</span>`;
+  } else if(completados>0){
+    statusHtml = `<span class="badge-pendiente">${completados}/${totalPartidos} pronósticos</span>`;
   }
 
   // Mensaje de cierre próximo (si falta menos de 24h para el primer partido)
@@ -696,18 +708,23 @@ function renderPartidosGrupo(letra, bloqueado){
     } else {
       const t = tiempoParaBloqueo(p);
       const tiempoTag = t ? `<div style="font-size:10px;color:${t.includes('min')?'#E65100':'#9E9E9E'};margin-top:2px">${t}</div>` : '';
+      const tienePronosticoTag = (pron.local!==undefined&&pron.local!==null&&pron.visit!==undefined&&pron.visit!==null)
+        ? `<div class="completado-tag">✓ Guardado</div>` : `<div style="font-size:10px;color:#BDBDBD;margin-top:3px">Sin pronóstico</div>`;
       scoreHtml=`<div class="score-center">
         <div class="score-inputs">
           <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.local!==null&&pron.local!==undefined?pron.local:''}" id="sc_${p.id}_l">
           <span class="score-sep">–</span>
           <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.visit!==null&&pron.visit!==undefined?pron.visit:''}" id="sc_${p.id}_v">
         </div>
+        ${tienePronosticoTag}
         ${tiempoTag}
         <div class="partido-fecha">${p.fecha} · ${p.hora}</div>
       </div>`;
     }
 
-    return `<div class="partido-row">
+    // Verificar si tiene pronóstico completo
+    const tienePronostico = !estaBloqueado && pron.local!==undefined && pron.local!==null && pron.visit!==undefined && pron.visit!==null;
+    return `<div class="partido-row${tienePronostico?' partido-completo':''}">
       <div class="team-col"><span class="team-flag-lg">${lEq.f}</span><span class="team-name-sm">${lEq.n}</span></div>
       ${scoreHtml}
       <div class="team-col right"><span class="team-name-sm">${vEq.n}</span><span class="team-flag-lg">${vEq.f}</span></div>
