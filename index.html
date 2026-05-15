@@ -168,10 +168,7 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
     <label class="form-label">Nombre completo</label>
     <input type="text" class="form-input" id="login-nombre" placeholder="Tu nombre completo" onkeydown="if(event.key==='Enter')doLogin()">
   </div>
-  <div class="form-group">
-    <label class="form-label">Agencia</label>
-    <input type="text" class="form-input" id="login-agencia" placeholder="Nombre de tu agencia" onkeydown="if(event.key==='Enter')doLogin()">
-  </div>
+
   <button class="btn-primary" id="login-btn" onclick="doLogin()">Ingresar al concurso</button>
 </div>
 </div>
@@ -426,11 +423,11 @@ function applyLogo(){
 async function doLogin(){
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const nombre = document.getElementById('login-nombre').value.trim();
-  const agencia = document.getElementById('login-agencia').value.trim();
+  const agencia = '';
   const msgEl = document.getElementById('login-msg');
   const btn = document.getElementById('login-btn');
 
-  if(!email||!nombre||!agencia){
+  if(!email||!nombre){
     msgEl.innerHTML='<div class="msg error">Completa todos los campos.</div>'; return;
   }
   btn.disabled=true; btn.textContent='Verificando...';
@@ -897,13 +894,12 @@ async function renderTabla(){
   if(sorted.length===0){cont.innerHTML='<div class="msg info">Aún no hay participantes registrados.</div>';return;}
 
   cont.innerHTML=`<table class="tabla">
-    <thead><tr><th style="width:36px;text-align:center">#</th><th>Participante</th><th>Agencia</th><th style="text-align:center">Exactos</th><th style="text-align:center">Puntos</th></tr></thead>
+    <thead><tr><th style="width:36px;text-align:center">#</th><th>Participante</th><th style="text-align:center">Exactos</th><th style="text-align:center">Puntos</th></tr></thead>
     <tbody>${sorted.map((p,i)=>{
       const rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
       const esYo=p.email===currentUser.email;
       return `<tr${esYo?' class="me"':''}><td><div class="rank-circle ${rc}">${i+1}</div></td>
         <td><div style="font-weight:600">${p.nombre}${esYo?' <span style="font-size:11px;color:var(--red);font-weight:500">(tú)</span>':''}</div><div style="font-size:12px;color:var(--gray-400)">${p.email}</div></td>
-        <td style="font-size:13px;color:var(--gray-600)">${p.agencia||'-'}</td>
         <td style="text-align:center">${p.exact}🎯${p.campeon?'<span class="champ-star">★</span>':''}</td>
         <td style="text-align:center"><span class="pts-pill">${p.total}</span></td></tr>`;
     }).join('')}</tbody></table>`;
