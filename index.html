@@ -388,11 +388,17 @@ async function cargarPronosticos(){
 async function cargarCampeon(){
   const {data} = await sb.from('campeon').select('*').eq('id',1).single();
   campeonData = data||{equipo_id:null, real:null};
-  // buscar pronostico campeon del usuario
-  const {data:d2} = await sb.from('campeon').select('pronostico_email').eq('id',1).single();
-  // campeon por usuario en pronosticos tabla con partido_id='campeon'
-  const {data:d3} = await sb.from('pronosticos').select('*').eq('email',currentUser.email).eq('partido_id','campeon').maybeSingle();
-  campeonData.mi_campeon = d3 ? d3.local : null; // guardamos el equipo como 'local'
+  // Pronóstico del campeón guardado como partido_id='campeon_ARG' etc.
+  const {data:campProns} = await sb.from('pronosticos').select('partido_id').eq('email',currentUser.email).like('partido_id','campeon_%');
+  if(campProns && campProns.length>0){
+    // Extraer el equipoId del partido_id: 'campeon_ARG' -> 'ARG'
+    const pid = campProns[campProns.length-1].partido_id;
+    campeonData.mi_campeon = pid.replace('campeon_','');
+  } else {
+    // Retrocompatibilidad: buscar formato antiguo
+    const {data:d3} = await sb.from('pronosticos').select('*').eq('email',currentUser.email).eq('partido_id','campeon').maybeSingle();
+    campeonData.mi_campeon = d3 ? String(d3.local) : null;
+  }
 }
 
 async function cargarConfig(){
@@ -497,7 +503,18 @@ function renderCampeon(){
 
 async function guardarCampeon(val){
   if(!val) return;
-  await sb.from('pronosticos').upsert({email:currentUser.email, partido_id:'campeon', local:val, visit:0},{onConflict:'email,partido_id'});
+  // Guardamos el equipo en un registro especial: partido_id='campeon_[equipoId]'
+  // Primero borramos cualquier pronóstico anterior de campeón
+  await sb.from('pronosticos').delete().eq('email',currentUser.email).eq('partido_id','campeon');
+  // También borramos registros con formato campeon_XXX anteriores
+  const {data:prevs} = await sb.from('pronosticos').select('partido_id').eq('email',currentUser.email).like('partido_id','campeon_%');
+  if(prevs && prevs.length>0){
+    for(const prev of prevs){
+      await sb.from('pronosticos').delete().eq('email',currentUser.email).eq('partido_id',prev.partido_id);
+    }
+  }
+  // Guardamos el nuevo pronóstico con el equipoId en el partido_id
+  await sb.from('pronosticos').insert({email:currentUser.email, partido_id:`campeon_${val}`, local:0, visit:0});
   campeonData.mi_campeon = val;
   renderCampeon();
 }
@@ -840,9 +857,13 @@ async function renderTabla(){
   });
 
   if(campeonReal){
-    (prons||[]).filter(pr=>pr.partido_id==='campeon').forEach(pr=>{
+    (prons||[]).filter(pr=>pr.partido_id===`campeon_${campeonReal}`||pr.partido_id==='campeon').forEach(pr=>{
       if(!puntos[pr.email])return;
-      if(pr.local===campeonReal){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
+      // Para formato nuevo campeon_ARG: el equipo está en partido_id
+      // Para formato antiguo: el equipo está en local (como string o número)
+      const esNuevo = pr.partido_id.startsWith('campeon_');
+      if(esNuevo){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
+      else if(String(pr.local)===campeonReal){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
     });
   }
 
