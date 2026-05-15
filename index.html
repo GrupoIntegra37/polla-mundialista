@@ -509,6 +509,79 @@ function renderPronosticos(){
   renderElim();
 }
 
+// ═══ BLOQUEO AUTOMÁTICO POR HORA ═══
+// Meses del mundial 2026 (Colombia UTC-5)
+const MESES = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11,
+               Ene:5,Feb2:1,Abr:3,May2:4,Jun2:5,Jul2:6,Ago:7,Sep2:8,Oct2:9,Nov2:10,Dic:11};
+
+function parseFechaHora(fecha, hora){
+  // fecha: "11 Jun", hora: "17:00"
+  // Parseamos para el año 2026
+  try {
+    const [dia, mes] = fecha.split(' ');
+    const mesNum = {
+      'Ene':0,'Feb':1,'Mar':2,'Abr':3,'May':4,'Jun':5,
+      'Jul':6,'Ago':7,'Sep':8,'Oct':9,'Nov':10,'Dic':11,
+      'Jan':0,'Feb2':1,'Mar2':2,'Apr':3,'Jun2':5,'Jul2':6
+    }[mes] ?? 5; // default junio si no reconoce
+    const [hh, mm] = hora.split(':').map(Number);
+    // Los horarios son hora Colombia (UTC-5)
+    // Creamos fecha en UTC sumando 5 horas
+    return new Date(Date.UTC(2026, mesNum, parseInt(dia), hh+5, mm, 0));
+  } catch(e){ return null; }
+}
+
+function mesANum(mes){
+  const map = {
+    'Ene':0,'Feb':1,'Mar':2,'Abr':3,'May':4,'Jun':5,
+    'Jul':6,'Ago':7,'Sep':8,'Oct':9,'Nov':10,'Dic':11,
+    'Jan':0,'Apr':3
+  };
+  return map[mes] ?? 5;
+}
+
+function estaPartidoBloqueadoPorHora(partido){
+  // Bloquea 30 minutos ANTES del partido
+  try {
+    const [dia, mes] = partido.fecha.split(' ');
+    const mesNum = mesANum(mes);
+    const [hh, mm] = partido.hora.split(':').map(Number);
+    // Hora del partido en UTC (Colombia = UTC-5, sumamos 5h)
+    const fechaPartido = new Date(Date.UTC(2026, mesNum, parseInt(dia), hh+5, mm, 0));
+    // Bloqueo = 30 minutos antes
+    const bloqueoEn = new Date(fechaPartido.getTime() - 30*60*1000);
+    const ahora = new Date();
+    return ahora >= bloqueoEn;
+  } catch(e){ return false; }
+}
+
+function tiempoParaBloqueo(partido){
+  // Retorna texto legible del tiempo restante para bloqueo
+  try {
+    const [dia, mes] = partido.fecha.split(' ');
+    const mesNum = mesANum(mes);
+    const [hh, mm] = partido.hora.split(':').map(Number);
+    const fechaPartido = new Date(Date.UTC(2026, mesNum, parseInt(dia), hh+5, mm, 0));
+    const bloqueoEn = new Date(fechaPartido.getTime() - 30*60*1000);
+    const diff = bloqueoEn - new Date();
+    if(diff <= 0) return null;
+    const dias = Math.floor(diff / (1000*60*60*24));
+    const horas = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+    const mins = Math.floor((diff % (1000*60*60)) / (1000*60));
+    if(dias > 0) return `Cierra en ${dias}d ${horas}h`;
+    if(horas > 0) return `Cierra en ${horas}h ${mins}m`;
+    return `⚠️ Cierra en ${mins} min`;
+  } catch(e){ return null; }
+}
+
+function grupoBloqueadoPorHora(letra){
+  // El grupo se bloquea si el PRIMER partido del grupo ya alcanzó su tiempo de bloqueo
+  const partidos = partidosDB.filter(p=>p.grupo===letra);
+  if(partidos.length===0) return false;
+  // Ordenar por fecha/hora y revisar el primero
+  return partidos.some(p => estaPartidoBloqueadoPorHora(p));
+}
+
 function renderGrupos(){
   const cont = document.getElementById('grupos-container');
   cont.innerHTML = Object.keys(GRUPOS_DATA).map(g => renderGrupoCard(g)).join('');
@@ -516,14 +589,31 @@ function renderGrupos(){
 
 function renderGrupoCard(letra){
   const grupo = GRUPOS_DATA[letra];
-  const bloqueado = gruposBloqueados.includes(letra);
+  const bloqueadoManual = gruposBloqueados.includes(letra);
+  const bloqueadoHora = grupoBloqueadoPorHora(letra);
+  const bloqueado = bloqueadoManual || bloqueadoHora;
   const partidos = partidosDB.filter(p=>p.grupo===letra);
   const tieneAlgunPron = partidos.some(p=>pronosticos[p.id]);
 
   const paisesHtml = grupo.paises.map(p=>`<div class="pais-chip"><span class="flag">${p.f}</span><span>${p.n}</span></div>`).join('');
-  const statusHtml = bloqueado
-    ? '<span class="badge-guardado">✓ Guardado</span>'
-    : tieneAlgunPron ? '<span class="badge-pendiente">Incompleto</span>' : '';
+
+  let statusHtml = '';
+  if(bloqueado){
+    statusHtml = '<span class="badge-guardado">🔒 Cerrado</span>';
+  } else if(tieneAlgunPron){
+    statusHtml = '<span class="badge-pendiente">Incompleto</span>';
+  }
+
+  // Mensaje de cierre próximo (si falta menos de 24h para el primer partido)
+  let cierreProximo = '';
+  if(!bloqueado){
+    const primerPartido = partidos[0];
+    if(primerPartido){
+      const t = tiempoParaBloqueo(primerPartido);
+      if(t && t.includes('min')) cierreProximo = `<div class="msg warning" style="margin:8px 0 0">⚠️ ${t} — guarda tus pronósticos pronto</div>`;
+      else if(t && !t.includes('d')) cierreProximo = `<div style="font-size:11px;color:#E65100;margin-top:4px">${t}</div>`;
+    }
+  }
 
   return `<div class="grupo-card" id="grupo-card-${letra}">
     <div class="grupo-header" onclick="toggleGrupo('${letra}')">
@@ -537,8 +627,14 @@ function renderGrupoCard(letra){
       </div>
     </div>
     <div class="grupo-body" id="grupo-body-${letra}">
+      ${cierreProximo}
       ${renderPartidosGrupo(letra, bloqueado)}
-      ${!bloqueado ? `<button class="btn-guardar-grupo" onclick="pedirConfirmacion('${letra}')">Guardar pronósticos del Grupo ${letra}</button>` : '<div class="msg success" style="margin-top:12px">✓ Pronósticos guardados y bloqueados</div>'}
+      ${!bloqueado
+        ? `<button class="btn-guardar-grupo" onclick="pedirConfirmacion('${letra}')">Guardar pronósticos del Grupo ${letra}</button>`
+        : bloqueadoHora && !bloqueadoManual
+          ? '<div class="msg warning" style="margin-top:12px">🔒 Pronósticos cerrados automáticamente — el partido está por comenzar</div>'
+          : '<div class="msg success" style="margin-top:12px">✓ Pronósticos guardados y bloqueados</div>'
+      }
     </div>
   </div>`;
 }
@@ -549,9 +645,12 @@ function renderPartidosGrupo(letra, bloqueado){
     const lEq=getPais(p.local), vEq=getPais(p.visit);
     const pron=pronosticos[p.id]||{};
     const tieneRes = p.res_local!==null && p.res_local!==undefined;
+    // Bloqueo individual por hora para cada partido
+    const bloqHora = estaPartidoBloqueadoPorHora(p);
+    const estaBloqueado = bloqueado || p.bloqueado || bloqHora || tieneRes;
 
     let scoreHtml='';
-    if(bloqueado||tieneRes){
+    if(estaBloqueado){
       const pl=pron.local!==null&&pron.local!==undefined?pron.local:'?';
       const pv=pron.visit!==null&&pron.visit!==undefined?pron.visit:'?';
       let resultTag='';
@@ -565,22 +664,28 @@ function renderPartidosGrupo(letra, bloqueado){
         else resultTag=`<div class="result-tag result-fail">✗ Sin puntos</div>`;
         resultTag += `<div class="result-real">${rl}–${rv}</div>`;
       }
+      // Tiempo restante si aún no empezó pero ya bloqueó
+      const tRestante = tiempoParaBloqueo(p);
+      const bloqTag = bloqHora && !tieneRes ? `<div style="font-size:10px;color:#E65100;margin-top:2px">🔒 Cerrado</div>` : '';
       scoreHtml=`<div class="score-center">
         <div class="score-inputs">
           <div class="score-locked">${pl}</div>
           <span class="score-sep">–</span>
           <div class="score-locked">${pv}</div>
         </div>
-        ${resultTag}
+        ${resultTag}${bloqTag}
         <div class="partido-fecha">${p.fecha} · ${p.hora}</div>
       </div>`;
     } else {
+      const t = tiempoParaBloqueo(p);
+      const tiempoTag = t ? `<div style="font-size:10px;color:${t.includes('min')?'#E65100':'#9E9E9E'};margin-top:2px">${t}</div>` : '';
       scoreHtml=`<div class="score-center">
         <div class="score-inputs">
           <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.local!==null&&pron.local!==undefined?pron.local:''}" id="sc_${p.id}_l">
           <span class="score-sep">–</span>
           <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.visit!==null&&pron.visit!==undefined?pron.visit:''}" id="sc_${p.id}_v">
         </div>
+        ${tiempoTag}
         <div class="partido-fecha">${p.fecha} · ${p.hora}</div>
       </div>`;
     }
@@ -663,18 +768,34 @@ function setElimFase(fase){
   cont.innerHTML = partidos.map(p=>{
     const lEq=getPais(p.local), vEq=getPais(p.visit);
     const pron=pronosticos[p.id]||{};
-    const bloq=p.bloqueado||(p.res_local!==null&&p.res_local!==undefined);
+    const tieneRes=p.res_local!==null&&p.res_local!==undefined;
+    const bloqHora=estaPartidoBloqueadoPorHora(p);
+    const bloq=p.bloqueado||tieneRes||bloqHora;
     let scoreHtml='';
     if(bloq){
       const pl=pron.local!==null&&pron.local!==undefined?pron.local:'?';
       const pv=pron.visit!==null&&pron.visit!==undefined?pron.visit:'?';
-      scoreHtml=`<div class="score-center"><div class="score-inputs"><div class="score-locked">${pl}</div><span class="score-sep">–</span><div class="score-locked">${pv}</div></div><div class="partido-fecha">${p.fecha} · ${p.hora}</div></div>`;
+      let resultTag='';
+      if(tieneRes){
+        const rl=p.res_local,rv=p.res_visit;
+        const rr=rl>rv?'L':rv>rl?'V':'E';
+        const pl2=parseInt(pron.local),pv2=parseInt(pron.visit);
+        const rp=pl2>pv2?'L':pv2>pl2?'V':'E';
+        if(pl2===rl&&pv2===rv) resultTag=`<div class="result-tag result-exact">🎯 Exacto +3</div>`;
+        else if(rp===rr) resultTag=`<div class="result-tag result-ok">✓ Resultado +1</div>`;
+        else resultTag=`<div class="result-tag result-fail">✗ Sin puntos</div>`;
+        resultTag+=`<div class="result-real">${rl}–${rv}</div>`;
+      }
+      const bloqTag=bloqHora&&!tieneRes?`<div style="font-size:10px;color:#E65100;margin-top:2px">🔒 Cerrado</div>`:'';
+      scoreHtml=`<div class="score-center"><div class="score-inputs"><div class="score-locked">${pl}</div><span class="score-sep">–</span><div class="score-locked">${pv}</div></div>${resultTag}${bloqTag}<div class="partido-fecha">${p.fecha} · ${p.hora}</div></div>`;
     } else {
+      const t=tiempoParaBloqueo(p);
+      const tiempoTag=t?`<div style="font-size:10px;color:${t.includes('min')?'#E65100':'#9E9E9E'};margin-top:2px">${t}</div>`:'';
       scoreHtml=`<div class="score-center"><div class="score-inputs">
         <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.local!==null&&pron.local!==undefined?pron.local:''}" id="sc_${p.id}_l" oninput="autoSaveElim('${p.id}')">
         <span class="score-sep">–</span>
         <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.visit!==null&&pron.visit!==undefined?pron.visit:''}" id="sc_${p.id}_v" oninput="autoSaveElim('${p.id}')">
-      </div><div class="partido-fecha">${p.fecha} · ${p.hora}</div></div>`;
+      </div>${tiempoTag}<div class="partido-fecha">${p.fecha} · ${p.hora}</div></div>`;
     }
     return `<div class="partido-row">
       <div class="team-col"><span class="team-flag-lg">${lEq.f}</span><span class="team-name-sm">${lEq.n}</span></div>
