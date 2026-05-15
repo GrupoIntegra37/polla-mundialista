@@ -576,9 +576,11 @@ async function renderTablaAdmin(){
     });
   });
   if(campeonReal){
-    (prons||[]).filter(pr=>pr.partido_id==='campeon').forEach(pr=>{
+    (prons||[]).filter(pr=>pr.partido_id===`campeon_${campeonReal}`||pr.partido_id==='campeon').forEach(pr=>{
       if(!puntos[pr.email])return;
-      if(pr.local===campeonReal){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
+      const esNuevo=pr.partido_id.startsWith('campeon_');
+      if(esNuevo){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
+      else if(String(pr.local)===campeonReal){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
     });
   }
   const sorted=Object.entries(puntos).map(([email,d])=>({email,...d})).sort((a,b)=>b.total-a.total||b.exact-a.exact);
