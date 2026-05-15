@@ -441,13 +441,30 @@ function renderPartidosAdmin(){
     if(esElim){
       const optsL=TODOS_PAISES.map(eq=>`<option value="${eq.id}"${eq.id===p.local?' selected':''}>${eq.f} ${eq.n}</option>`).join('');
       const optsV=TODOS_PAISES.map(eq=>`<option value="${eq.id}"${eq.id===p.visit?' selected':''}>${eq.f} ${eq.n}</option>`).join('');
+      // Opciones "Por definir" para mantener placeholder
+      const porDefinirOpts = [
+        {v:'1A',t:'1° Grupo A'},{v:'2A',t:'2° Grupo A'},{v:'1B',t:'1° Grupo B'},{v:'2B',t:'2° Grupo B'},
+        {v:'1C',t:'1° Grupo C'},{v:'2C',t:'2° Grupo C'},{v:'1D',t:'1° Grupo D'},{v:'2D',t:'2° Grupo D'},
+        {v:'1E',t:'1° Grupo E'},{v:'2E',t:'2° Grupo E'},{v:'1F',t:'1° Grupo F'},{v:'2F',t:'2° Grupo F'},
+        {v:'1G',t:'1° Grupo G'},{v:'2G',t:'2° Grupo G'},{v:'1H',t:'1° Grupo H'},{v:'2H',t:'2° Grupo H'},
+        {v:'1I',t:'1° Grupo I'},{v:'2I',t:'2° Grupo I'},{v:'1J',t:'1° Grupo J'},{v:'2J',t:'2° Grupo J'},
+        {v:'1K',t:'1° Grupo K'},{v:'2K',t:'2° Grupo K'},{v:'1L',t:'1° Grupo L'},{v:'2L',t:'2° Grupo L'},
+        {v:'G1',t:'Ganador P1'},{v:'G2',t:'Ganador P2'},{v:'G3',t:'Ganador P3'},{v:'G4',t:'Ganador P4'},
+        {v:'G5',t:'Ganador P5'},{v:'G6',t:'Ganador P6'},{v:'G7',t:'Ganador P7'},{v:'G8',t:'Ganador P8'},
+        {v:'C1',t:'Clasificado 1'},{v:'C2',t:'Clasificado 2'},{v:'C3',t:'Clasificado 3'},{v:'C4',t:'Clasificado 4'},
+        {v:'Clasificado',t:'Por definir'}
+      ];
+      const pdOptsL = porDefinirOpts.map(o=>`<option value="${o.v}"${o.v===p.local?' selected':''}>${o.t}</option>`).join('');
+      const pdOptsV = porDefinirOpts.map(o=>`<option value="${o.v}"${o.v===p.visit?' selected':''}>${o.t}</option>`).join('');
       equiposHtml=`<div style="display:flex;gap:6px;align-items:center;margin:8px 0;flex-wrap:wrap;justify-content:center">
-        <select class="form-input" id="eq_${p.id}_l" style="width:155px;padding:6px 8px;font-size:12px">
-          <option value="${p.local}">${lEq.f} ${lEq.n}</option>${optsL}
+        <select class="form-input" id="eq_${p.id}_l" style="width:175px;padding:6px 8px;font-size:12px">
+          <optgroup label="── Por definir ──">${pdOptsL}</optgroup>
+          <optgroup label="── Equipos clasificados ──">${optsL}</optgroup>
         </select>
         <span style="font-weight:700;color:var(--g400)">vs</span>
-        <select class="form-input" id="eq_${p.id}_v" style="width:155px;padding:6px 8px;font-size:12px">
-          <option value="${p.visit}">${vEq.f} ${vEq.n}</option>${optsV}
+        <select class="form-input" id="eq_${p.id}_v" style="width:175px;padding:6px 8px;font-size:12px">
+          <optgroup label="── Por definir ──">${pdOptsV}</optgroup>
+          <optgroup label="── Equipos clasificados ──">${optsV}</optgroup>
         </select>
         <button class="btn-sm btn-green" onclick="actualizarEquipos('${p.id}')">✓ Actualizar</button>
       </div>`;
