@@ -391,7 +391,10 @@ async function renderParticipantes(){
   if(!data||data.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Nadie se ha registrado aún.</div>';return;}
   cont.innerHTML=data.map(p=>`<div class="part-row">
     <div><div class="part-name">${p.nombre}</div><div class="part-meta">${p.email}</div></div>
-    <div style="font-size:11px;color:var(--g400)">${p.created_at?new Date(p.created_at).toLocaleDateString('es-CO'):''}</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;color:var(--g400)">${p.created_at?new Date(p.created_at).toLocaleDateString('es-CO'):''}</span>
+      <button class="btn-sm" style="background:#FFEBEB;color:#C0001A;border:1px solid #FFCDD2;padding:4px 10px;font-size:12px" onclick="eliminarParticipante('${p.email}','${p.nombre}')">Eliminar</button>
+    </div>
   </div>`).join('');
 }
 
@@ -492,6 +495,16 @@ function renderPartidosAdmin(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function eliminarParticipante(email, nombre){
+  if(!confirm(`¿Eliminar a ${nombre} (${email}) del concurso?\n\nEsto borrará su registro y todos sus pronósticos.`)) return;
+  const {error:e1} = await sb.from('pronosticos').delete().eq('email', email);
+  const {error:e2} = await sb.from('participantes').delete().eq('email', email);
+  if(e1||e2){ alert('Error al eliminar. Intenta de nuevo.'); return; }
+  alert(`✅ ${nombre} eliminado correctamente.`);
+  renderParticipantes();
+  renderStats();
 }
 
 async function actualizarEquipos(pid){
