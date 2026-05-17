@@ -131,6 +131,26 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
 .partido-completo{border-left:4px solid #2E7D32 !important;background:#F9FFF9}
 .partido-completo .score-input{border-color:#A5D6A7 !important;background:#F1FFF1}
 .completado-tag{display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#1B5E20;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:3px;border:1px solid #C8E6C9}
+
+/* MINI PERFIL */
+.mini-perfil{background:linear-gradient(135deg,var(--red-dark),var(--red));border-radius:14px;padding:18px 20px;margin-bottom:16px;color:white;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+.mp-stat{text-align:center}
+.mp-num{font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;letter-spacing:1px}
+.mp-label{font-size:11px;opacity:0.8;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px}
+.mp-pos{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;letter-spacing:1px}
+.mp-grupos-bar{grid-column:1/-1;margin-top:4px}
+.mp-bar-track{background:rgba(255,255,255,0.2);border-radius:20px;height:6px;margin-top:6px;overflow:hidden}
+.mp-bar-fill{background:white;height:100%;border-radius:20px;transition:width 0.5s ease}
+.mp-bar-label{font-size:11px;opacity:0.8;display:flex;justify-content:space-between;margin-top:4px}
+
+/* RESULTADO VS PRONOSTICO */
+.vs-result-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
+.vs-result-pron{font-size:13px;color:var(--gray-600);font-weight:500}
+.vs-result-sep{font-size:11px;color:var(--gray-400)}
+.vs-result-real{font-size:13px;font-weight:700}
+.vs-exact{color:#1B5E20}
+.vs-ok{color:#1565C0}
+.vs-fail{color:#C62828}
 .spinner{width:32px;height:32px;border:3px solid var(--gray-200);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -195,6 +215,8 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
 
     <!-- PRONÓSTICOS -->
     <div id="pane-pronosticos">
+      <!-- Mini perfil -->
+      <div id="mini-perfil-block"></div>
       <!-- Campeón -->
       <div class="card" style="border-left:4px solid var(--red)">
         <div class="card-title">🏆 Pronóstico Campeón Mundial</div>
@@ -456,6 +478,7 @@ async function doLogin(){
 
   document.getElementById('header-user-email').textContent = `${nombre} · ${email}`;
   showScreen('screen-app');
+  renderMiniPerfil();
   renderPronosticos();
   btn.disabled=false; btn.textContent='Ingresar al concurso';
 }
@@ -482,9 +505,99 @@ function setTab(tab){
   document.getElementById('nav-pronosticos').classList.toggle('active', tab==='pronosticos');
   document.getElementById('nav-tabla').classList.toggle('active', tab==='tabla');
   if(tab==='tabla') renderTabla();
+  if(tab==='pronosticos') renderMiniPerfil();
 }
 
 // ═══ CAMPEÓN ═══
+async function renderMiniPerfil(){
+  const cont = document.getElementById('mini-perfil-block');
+  if(!cont) return;
+
+  // Calcular puntos del usuario actual
+  const puntos = calcularPuntosUsuario();
+  
+  // Obtener posición en la tabla
+  const {data:parts} = await sb.from('participantes').select('email');
+  const {data:prons} = await sb.from('pronosticos').select('*');
+  const {data:campDB} = await sb.from('campeon').select('real').eq('id',1).single();
+  const campeonReal = campDB?.real||null;
+  
+  // Calcular puntos de todos para posición
+  const todosLosEmail = (parts||[]).map(p=>p.email);
+  const puntosMap = {};
+  todosLosEmail.forEach(e=>{ puntosMap[e]=0; });
+  
+  partidosDB.filter(p=>p.res_local!==null&&p.res_local!==undefined).forEach(partido=>{
+    const rl=partido.res_local, rv=partido.res_visit;
+    const rr=rl>rv?'L':rv>rl?'V':'E';
+    (prons||[]).filter(pr=>pr.partido_id===partido.id).forEach(pr=>{
+      if(puntosMap[pr.email]===undefined) puntosMap[pr.email]=0;
+      const pl=parseInt(pr.local), pv=parseInt(pr.visit);
+      if(isNaN(pl)||isNaN(pv)) return;
+      const rp=pl>pv?'L':pv>pl?'V':'E';
+      if(pl===rl&&pv===rv) puntosMap[pr.email]+=3;
+      else if(rp===rr) puntosMap[pr.email]+=1;
+    });
+  });
+  if(campeonReal){
+    (prons||[]).filter(pr=>pr.partido_id===`campeon_${campeonReal}`).forEach(pr=>{
+      if(puntosMap[pr.email]!==undefined) puntosMap[pr.email]+=10;
+    });
+  }
+  
+  const sorted = Object.entries(puntosMap).sort((a,b)=>b[1]-a[1]);
+  const posicion = sorted.findIndex(([e])=>e===currentUser.email)+1||'-';
+  const total = sorted.length||1;
+  
+  // Grupos completados
+  const gruposCompletados = gruposBloqueados.length;
+  const totalGrupos = 12;
+  const porcentaje = Math.round((gruposCompletados/totalGrupos)*100);
+  
+  // Partidos con resultado exacto
+  const exactos = puntos.exact||0;
+  const ptsTotales = puntos.total||0;
+
+  cont.innerHTML = `<div class="mini-perfil">
+    <div class="mp-stat">
+      <div class="mp-pos">${posicion}°</div>
+      <div class="mp-label">Posición</div>
+    </div>
+    <div class="mp-stat">
+      <div class="mp-num">${ptsTotales}</div>
+      <div class="mp-label">Puntos</div>
+    </div>
+    <div class="mp-stat">
+      <div class="mp-num">${exactos}</div>
+      <div class="mp-label">Exactos 🎯</div>
+    </div>
+    <div class="mp-stat">
+      <div class="mp-num">${gruposCompletados}/${totalGrupos}</div>
+      <div class="mp-label">Grupos</div>
+    </div>
+    <div class="mp-grupos-bar">
+      <div class="mp-bar-track"><div class="mp-bar-fill" style="width:${porcentaje}%"></div></div>
+      <div class="mp-bar-label"><span>Progreso de pronósticos</span><span>${porcentaje}%</span></div>
+    </div>
+  </div>`;
+}
+
+function calcularPuntosUsuario(){
+  let total=0, exact=0, resultado=0, campeon=false;
+  partidosDB.filter(p=>p.res_local!==null&&p.res_local!==undefined).forEach(partido=>{
+    const pron=pronosticos[partido.id];
+    if(!pron) return;
+    const rl=partido.res_local, rv=partido.res_visit;
+    const rr=rl>rv?'L':rv>rl?'V':'E';
+    const pl=parseInt(pron.local), pv=parseInt(pron.visit);
+    if(isNaN(pl)||isNaN(pv)) return;
+    const rp=pl>pv?'L':pv>pl?'V':'E';
+    if(pl===rl&&pv===rv){total+=3;exact++;}
+    else if(rp===rr){total+=1;resultado++;}
+  });
+  return {total,exact,resultado,campeon};
+}
+
 function renderCampeon(){
   const cont = document.getElementById('campeon-block');
   const bloq = campeonData.real !== null && campeonData.real !== undefined;
@@ -693,14 +806,22 @@ function renderPartidosGrupo(letra, bloqueado){
         const rr=rl>rv?'L':rv>rl?'V':'E';
         const pl2=parseInt(pron.local),pv2=parseInt(pron.visit);
         const rp=pl2>pv2?'L':pv2>pl2?'V':'E';
-        if(pl2===rl&&pv2===rv) resultTag=`<div class="result-tag result-exact">🎯 Exacto +3</div>`;
-        else if(rp===rr) resultTag=`<div class="result-tag result-ok">✓ Resultado +1</div>`;
-        else resultTag=`<div class="result-tag result-fail">✗ Sin puntos</div>`;
-        resultTag += `<div class="result-real">${rl}–${rv}</div>`;
+        const tieneValores = !isNaN(pl2)&&!isNaN(pv2);
+        let claseRes='vs-fail', iconoRes='✗', ptsRes='Sin puntos';
+        if(tieneValores){
+          if(pl2===rl&&pv2===rv){claseRes='vs-exact';iconoRes='🎯';ptsRes='+3 pts';}
+          else if(rp===rr){claseRes='vs-ok';iconoRes='✓';ptsRes='+1 pt';}
+        }
+        const pronTexto = tieneValores ? `${pl2}–${pv2}` : '?–?';
+        resultTag=`
+          <div class="vs-result-row">
+            <span class="vs-result-pron" title="Tu pronóstico">👤 ${pronTexto}</span>
+            <span class="vs-result-sep">→</span>
+            <span class="vs-result-real ${claseRes}" title="Resultado real">⚽ ${rl}–${rv}</span>
+          </div>
+          <div class="result-tag ${claseRes==='vs-exact'?'result-exact':claseRes==='vs-ok'?'result-ok':'result-fail'}">${iconoRes} ${ptsRes}</div>`;
       }
-      // Tiempo restante si aún no empezó pero ya bloqueó
-      const tRestante = tiempoParaBloqueo(p);
-      const bloqTag = bloqHora && !tieneRes ? `<div style="font-size:10px;color:#E65100;margin-top:2px">🔒 Cerrado</div>` : '';
+      const bloqTag = bloqHora && !tieneRes ? `<div style="font-size:10px;color:#E65100;margin-top:2px">🔒 Cerrado — esperando resultado</div>` : '';
       scoreHtml=`<div class="score-center">
         <div class="score-inputs">
           <div class="score-locked">${pl}</div>
