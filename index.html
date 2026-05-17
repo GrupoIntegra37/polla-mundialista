@@ -487,9 +487,9 @@ function doLogout(){
   currentUser=null; pronosticos={}; gruposBloqueados=[];
   document.getElementById('login-email').value='';
   document.getElementById('login-nombre').value='';
-  document.getElementById('login-agencia').value='';
   document.getElementById('login-msg').innerHTML='';
   showScreen('screen-login');
+  window.scrollTo(0,0);
 }
 
 function showScreen(id){
