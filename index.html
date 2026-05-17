@@ -403,9 +403,16 @@ async function cargarCampeon(){
 
 async function cargarConfig(){
   const {data} = await sb.from('config').select('*').eq('id',1).single();
-  configData = data||{logo_url:null, grupos_bloqueados:[]};
-  gruposBloqueados = configData.grupos_bloqueados||[];
+  configData = data||{logo_url:null};
   applyLogo();
+}
+
+async function cargarGruposBloqueados(){
+  // Grupos bloqueados POR USUARIO - guardados en pronosticos con partido_id='grupo_bloqueado_X'
+  const {data} = await sb.from('pronosticos').select('partido_id')
+    .eq('email', currentUser.email)
+    .like('partido_id','grupo_bloqueado_%');
+  gruposBloqueados = (data||[]).map(r=>r.partido_id.replace('grupo_bloqueado_',''));
 }
 
 function applyLogo(){
@@ -445,6 +452,7 @@ async function doLogin(){
   await cargarPartidos();
   await cargarPronosticos();
   await cargarCampeon();
+  await cargarGruposBloqueados();
 
   document.getElementById('header-user-email').textContent = `${nombre} · ${email}`;
   showScreen('screen-app');
@@ -775,9 +783,14 @@ async function confirmarGuardarGrupo(letra){
     await sb.from('pronosticos').upsert(upserts,{onConflict:'email,partido_id'});
   }
 
-  // Bloquear grupo en config
-  if(!gruposBloqueados.includes(letra)) gruposBloqueados.push(letra);
-  await sb.from('config').update({grupos_bloqueados:gruposBloqueados}).eq('id',1);
+  // Bloquear grupo POR USUARIO en pronosticos
+  if(!gruposBloqueados.includes(letra)){
+    gruposBloqueados.push(letra);
+    await sb.from('pronosticos').upsert(
+      {email:currentUser.email, partido_id:`grupo_bloqueado_${letra}`, local:1, visit:0},
+      {onConflict:'email,partido_id'}
+    );
+  }
 
   renderGrupos();
 }
