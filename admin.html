@@ -170,7 +170,11 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div style="font-size:12px;color:var(--g600);margin-bottom:6px">O importa una lista (un correo por línea):</div>
         <textarea class="form-input" id="bulk-correos" rows="4" placeholder="correo1@empresa.com&#10;correo2@empresa.com"></textarea>
         <button class="btn-sm btn-red" onclick="addBulk()" style="margin-top:8px">Importar lista</button>
-        <div id="correos-list" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:4px"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+          <input type="text" class="form-input" id="buscador-correos" placeholder="🔍 Buscar correo..." style="flex:1" oninput="renderCorreos(this.value)">
+          <button class="btn-sm btn-ghost" onclick="document.getElementById('buscador-correos').value='';renderCorreos('')">Limpiar</button>
+        </div>
+        <div id="correos-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="card">
         <div class="section-title">Participantes registrados</div>
@@ -326,10 +330,16 @@ async function renderStats(){
 }
 
 // CORREOS
-function renderCorreos(){
+function renderCorreos(filtro=''){
   const cont=document.getElementById('correos-list');
   if(correos.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Sin correos habilitados aún.</div>';return;}
-  cont.innerHTML=`<div style="font-size:12px;color:var(--g600);margin-bottom:8px">Total: <strong>${correos.length}</strong> correos habilitados</div>`+correos.map(e=>`<div class="correo-chip">${e}<span class="chip-remove" onclick="removeCorreo('${e}')">×</span></div>`).join('');
+  const filtrados = filtro ? correos.filter(e=>e.toLowerCase().includes(filtro.toLowerCase())) : correos;
+  cont.innerHTML=`<div style="font-size:12px;color:var(--g600);margin-bottom:8px">
+    Mostrando <strong>${filtrados.length}</strong> de <strong>${correos.length}</strong> correos habilitados
+  </div>`+( filtrados.length===0
+    ? '<div style="color:var(--g400);font-size:13px">No se encontraron correos con ese filtro.</div>'
+    : filtrados.map(e=>`<div class="correo-chip">${e}<span class="chip-remove" onclick="removeCorreo('${e}')">×</span></div>`).join('')
+  );
 }
 async function addCorreo(){
   const inp=document.getElementById('nuevo-correo');
@@ -385,11 +395,32 @@ async function removeCorreo(email){
 }
 
 // PARTICIPANTES
-async function renderParticipantes(){
-  const {data}=await sb.from('participantes').select('*').order('created_at',{ascending:false});
+let participantesDB = [];
+
+async function renderParticipantes(filtro=''){
+  if(!filtro){
+    // Solo recarga de DB si no hay filtro activo
+    const {data}=await sb.from('participantes').select('*').order('created_at',{ascending:false});
+    participantesDB = data||[];
+  }
   const cont=document.getElementById('participantes-list');
-  if(!data||data.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Nadie se ha registrado aún.</div>';return;}
-  cont.innerHTML=data.map(p=>`<div class="part-row">
+  if(participantesDB.length===0){cont.innerHTML='<div style="color:var(--g400);font-size:13px">Nadie se ha registrado aún.</div>';return;}
+  const filtrados = filtro
+    ? participantesDB.filter(p=>p.nombre.toLowerCase().includes(filtro.toLowerCase())||p.email.toLowerCase().includes(filtro.toLowerCase()))
+    : participantesDB;
+
+  const buscadorHtml = `<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+    <input type="text" class="form-input" id="buscador-participantes" placeholder="🔍 Buscar por nombre o correo..." style="flex:1" oninput="renderParticipantes(this.value)">
+    <button class="btn-sm btn-ghost" onclick="document.getElementById('buscador-participantes').value='';renderParticipantes('')">Limpiar</button>
+  </div>
+  <div style="font-size:12px;color:var(--g600);margin-bottom:10px">
+    Mostrando <strong>${filtrados.length}</strong> de <strong>${participantesDB.length}</strong> participantes registrados
+  </div>`;
+
+  if(filtrados.length===0){
+    cont.innerHTML=buscadorHtml+'<div style="color:var(--g400);font-size:13px">No se encontraron participantes con ese filtro.</div>';return;
+  }
+  cont.innerHTML=buscadorHtml+filtrados.map(p=>`<div class="part-row">
     <div><div class="part-name">${p.nombre}</div><div class="part-meta">${p.email}</div></div>
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:11px;color:var(--g400)">${p.created_at?new Date(p.created_at).toLocaleDateString('es-CO'):''}</span>
