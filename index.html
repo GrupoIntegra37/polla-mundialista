@@ -185,7 +185,7 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
     <input type="email" class="form-input" id="login-email" placeholder="tucorreo@empresa.com" onkeydown="if(event.key==='Enter')doLogin()">
   </div>
   <div class="form-group">
-    <label class="form-label">Nombre completo</label>
+    <label class="form-label">Nombre completo <span style="font-size:11px;color:#E65100;font-weight:400">⚠️ No podrá cambiarse después</span></label>
     <input type="text" class="form-input" id="login-nombre" placeholder="Tu nombre completo" onkeydown="if(event.key==='Enter')doLogin()">
   </div>
 
@@ -467,8 +467,16 @@ async function doLogin(){
     btn.disabled=false; btn.textContent='Ingresar al concurso'; return;
   }
 
-  await sb.from('participantes').upsert({email,nombre,agencia},{onConflict:'email'});
-  currentUser={email,nombre,agencia};
+  // Verificar si ya está registrado — si existe, usar el nombre original (no permitir cambio)
+  const {data:existente} = await sb.from('participantes').select('*').eq('email',email).maybeSingle();
+  if(existente){
+    // Ya registrado — usar nombre original, ignorar el nombre que escribió ahora
+    currentUser={email, nombre:existente.nombre, agencia:''};
+  } else {
+    // Primera vez — registrar con el nombre que escribió
+    await sb.from('participantes').insert({email, nombre, agencia:''});
+    currentUser={email, nombre, agencia:''};
+  }
 
   await cargarConfig();
   await cargarPartidos();
@@ -476,7 +484,7 @@ async function doLogin(){
   await cargarCampeon();
   await cargarGruposBloqueados();
 
-  document.getElementById('header-user-email').textContent = `${nombre} · ${email}`;
+  document.getElementById('header-user-email').textContent = `${currentUser.nombre} · ${email}`;
   showScreen('screen-app');
   renderMiniPerfil();
   renderPronosticos();
@@ -1033,7 +1041,7 @@ async function renderTabla(){
       const rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
       const esYo=p.email===currentUser.email;
       return `<tr${esYo?' class="me"':''}><td><div class="rank-circle ${rc}">${i+1}</div></td>
-        <td><div style="font-weight:600">${p.nombre}${esYo?' <span style="font-size:11px;color:var(--red);font-weight:500">(tú)</span>':''}</div><div style="font-size:12px;color:var(--gray-400)">${p.email}</div></td>
+        <td><div style="font-weight:600">${p.nombre}${esYo?' <span style="font-size:11px;color:var(--red);font-weight:500">(tú)</span>':''}</div></td>
         <td style="text-align:center">${p.exact}🎯${p.campeon?'<span class="champ-star">★</span>':''}</td>
         <td style="text-align:center"><span class="pts-pill">${p.total}</span></td></tr>`;
     }).join('')}</tbody></table>`;
