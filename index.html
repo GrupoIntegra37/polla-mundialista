@@ -661,18 +661,13 @@ const MESES = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:1
                Ene:5,Feb2:1,Abr:3,May2:4,Jun2:5,Jul2:6,Ago:7,Sep2:8,Oct2:9,Nov2:10,Dic:11};
 
 function parseFechaHora(fecha, hora){
-  // fecha: "11 Jun", hora: "17:00"
-  // Parseamos para el año 2026
+  // fecha: "11 Jun", hora: "14:00" (hora Colombia = UTC-5)
+  // Convertimos a UTC sumando 5 horas para comparar con new Date() que devuelve UTC
   try {
     const [dia, mes] = fecha.split(' ');
-    const mesNum = {
-      'Ene':0,'Feb':1,'Mar':2,'Abr':3,'May':4,'Jun':5,
-      'Jul':6,'Ago':7,'Sep':8,'Oct':9,'Nov':10,'Dic':11,
-      'Jan':0,'Feb2':1,'Mar2':2,'Apr':3,'Jun2':5,'Jul2':6
-    }[mes] ?? 5; // default junio si no reconoce
+    const mesNum = mesANum(mes);
     const [hh, mm] = hora.split(':').map(Number);
-    // Los horarios son hora Colombia (UTC-5)
-    // Creamos fecha en UTC sumando 5 horas
+    // hora Colombia (UTC-5) -> UTC: sumamos 5 horas
     return new Date(Date.UTC(2026, mesNum, parseInt(dia), hh+5, mm, 0));
   } catch(e){ return null; }
 }
@@ -688,21 +683,23 @@ function mesANum(mes){
 
 function estaPartidoBloqueadoPorHora(partido){
   // Bloquea 30 minutos ANTES del partido
+  // Todas las horas en la BD están en hora Colombia (UTC-5)
   try {
     const [dia, mes] = partido.fecha.split(' ');
     const mesNum = mesANum(mes);
     const [hh, mm] = partido.hora.split(':').map(Number);
-    // Hora del partido en UTC (Colombia = UTC-5, sumamos 5h)
-    const fechaPartido = new Date(Date.UTC(2026, mesNum, parseInt(dia), hh+5, mm, 0));
-    // Bloqueo = 30 minutos antes
-    const bloqueoEn = new Date(fechaPartido.getTime() - 30*60*1000);
-    const ahora = new Date();
-    return ahora >= bloqueoEn;
+    // Convertir hora Colombia a UTC: sumar 5 horas
+    const fechaPartidoUTC = new Date(Date.UTC(2026, mesNum, parseInt(dia), hh+5, mm, 0));
+    // Bloqueo = 30 minutos antes del partido
+    const bloqueoEnUTC = new Date(fechaPartidoUTC.getTime() - 30*60*1000);
+    const ahoraUTC = new Date(); // new Date() siempre retorna UTC internamente
+    return ahoraUTC >= bloqueoEnUTC;
   } catch(e){ return false; }
 }
 
 function tiempoParaBloqueo(partido){
   // Retorna texto legible del tiempo restante para bloqueo
+  // Hora en BD = hora Colombia (UTC-5), sumamos 5h para obtener UTC
   try {
     const [dia, mes] = partido.fecha.split(' ');
     const mesNum = mesANum(mes);
