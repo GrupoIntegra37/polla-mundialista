@@ -266,16 +266,16 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const GRUPOS_DATA = {
   A: {paises:[{id:'MEX',n:'México',f:'🇲🇽'},{id:'SAF',n:'Sudáfrica',f:'🇿🇦'},{id:'KOR',n:'Corea del Sur',f:'🇰🇷'},{id:'CZE',n:'Chequia',f:'🇨🇿'}]},
-  B: {paises:[{id:'CAN',n:'Canadá',f:'🇨🇦'},{id:'BIH',n:'Bosnia y Herzegovina',f:'🇧🇦'},{id:'QAT',n:'Catar',f:'🇶🇦'},{id:'SWI',n:'Suiza',f:'🇨🇭'}]},
+  B: {paises:[{id:'CAN',n:'Canadá',f:'🇨🇦'},{id:'BIH',n:'Bosnia y Herz.',f:'🇧🇦'},{id:'QAT',n:'Catar',f:'🇶🇦'},{id:'SWI',n:'Suiza',f:'🇨🇭'}]},
   C: {paises:[{id:'BRA',n:'Brasil',f:'🇧🇷'},{id:'MOR',n:'Marruecos',f:'🇲🇦'},{id:'HAI',n:'Haití',f:'🇭🇹'},{id:'SCO',n:'Escocia',f:'🏴󠁧󠁢󠁳󠁣󠁴󠁿'}]},
   D: {paises:[{id:'USA',n:'Estados Unidos',f:'🇺🇸'},{id:'PAR',n:'Paraguay',f:'🇵🇾'},{id:'AUS',n:'Australia',f:'🇦🇺'},{id:'TUR',n:'Turquía',f:'🇹🇷'}]},
   E: {paises:[{id:'GER',n:'Alemania',f:'🇩🇪'},{id:'CUW',n:'Curazao',f:'🇨🇼'},{id:'CIV',n:'Costa de Marfil',f:'🇨🇮'},{id:'ECU',n:'Ecuador',f:'🇪🇨'}]},
-  F: {paises:[{id:'NED',n:'Países Bajos',f:'🇳🇱'},{id:'JPN',n:'Japón',f:'🇯🇵'},{id:'SWE',n:'Suecia',f:'🇸🇪'},{id:'TUN',n:'Túnez',f:'🇹🇳'}]},
+  F: {paises:[{id:'NED',n:'Países Bajos',f:'🇳🇱'},{id:'JPN',n:'Japón',f:'🇯🇵'},{id:'TUN',n:'Túnez',f:'🇹🇳'},{id:'SWE',n:'Suecia',f:'🇸🇪'}]},
   G: {paises:[{id:'BEL',n:'Bélgica',f:'🇧🇪'},{id:'EGY',n:'Egipto',f:'🇪🇬'},{id:'IRN',n:'Irán',f:'🇮🇷'},{id:'NZL',n:'Nueva Zelanda',f:'🇳🇿'}]},
   H: {paises:[{id:'ESP',n:'España',f:'🇪🇸'},{id:'CPV',n:'Cabo Verde',f:'🇨🇻'},{id:'SAU',n:'Arabia Saudita',f:'🇸🇦'},{id:'URU',n:'Uruguay',f:'🇺🇾'}]},
-  I: {paises:[{id:'FRA',n:'Francia',f:'🇫🇷'},{id:'SEN',n:'Senegal',f:'🇸🇳'},{id:'IRQ',n:'Irak',f:'🇮🇶'},{id:'NOR',n:'Noruega',f:'🇳🇴'}]},
+  I: {paises:[{id:'FRA',n:'Francia',f:'🇫🇷'},{id:'SEN',n:'Senegal',f:'🇸🇳'},{id:'NOR',n:'Noruega',f:'🇳🇴'},{id:'IRQ',n:'Irak',f:'🇮🇶'}]},
   J: {paises:[{id:'ARG',n:'Argentina',f:'🇦🇷'},{id:'ALG',n:'Argelia',f:'🇩🇿'},{id:'AUT',n:'Austria',f:'🇦🇹'},{id:'JOR',n:'Jordania',f:'🇯🇴'}]},
-  K: {paises:[{id:'POR',n:'Portugal',f:'🇵🇹'},{id:'COD',n:'RD Congo',f:'🇨🇩'},{id:'UZB',n:'Uzbekistán',f:'🇺🇿'},{id:'COL',n:'Colombia',f:'🇨🇴'}]},
+  K: {paises:[{id:'POR',n:'Portugal',f:'🇵🇹'},{id:'COL',n:'Colombia',f:'🇨🇴'},{id:'UZB',n:'Uzbekistán',f:'🇺🇿'},{id:'COD',n:'RD Congo',f:'🇨🇩'}]},
   L: {paises:[{id:'ENG',n:'Inglaterra',f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},{id:'CRO',n:'Croacia',f:'🇭🇷'},{id:'GHA',n:'Ghana',f:'🇬🇭'},{id:'PAN',n:'Panamá',f:'🇵🇦'}]}
 };
 
@@ -681,7 +681,7 @@ function mesANum(mes){
   const map = {
     'Ene':0,'Feb':1,'Mar':2,'Abr':3,'May':4,'Jun':5,
     'Jul':6,'Ago':7,'Sep':8,'Oct':9,'Nov':10,'Dic':11,
-    'Jan':0,'Apr':3
+    'Jan':0,'Apr':3,'Jun2':5,'Jul2':6
   };
   return map[mes] ?? 5;
 }
