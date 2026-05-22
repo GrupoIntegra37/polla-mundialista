@@ -177,7 +177,10 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div id="correos-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
       <div class="card">
-        <div class="section-title">Participantes registrados</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="section-title" style="margin-bottom:0">Participantes registrados</div>
+          <button class="btn-sm btn-green" onclick="exportarExcel()">⬇️ Exportar Excel</button>
+        </div>
         <div id="participantes-list"></div>
       </div>
     </div>
@@ -527,6 +530,84 @@ function renderPartidosAdmin(){
     </div>`;
   }).join('');
 }
+
+async function exportarExcel(){
+  const btn = document.querySelector('[onclick="exportarExcel()"]');
+  btn.disabled=true; btn.textContent='Generando...';
+
+  const {data:parts} = await sb.from('participantes').select('*').order('nombre',{ascending:true});
+  const {data:prons} = await sb.from('pronosticos').select('*');
+  const campDB = await sb.from('campeon').select('real').eq('id',1).single();
+  const campeonReal = campDB?.data?.real||null;
+
+  if(!parts||parts.length===0){
+    alert('No hay participantes registrados aún.');
+    btn.disabled=false; btn.textContent='⬇️ Exportar Excel';
+    return;
+  }
+
+  // Calcular puntos por participante
+  const puntos = {};
+  parts.forEach(p=>{ puntos[p.email]={total:0, exact:0, campeon:false}; });
+
+  partidosDB.filter(p=>p.res_local!==null&&p.res_local!==undefined).forEach(partido=>{
+    const rl=partido.res_local, rv=partido.res_visit;
+    const rr=rl>rv?'L':rv>rl?'V':'E';
+    (prons||[]).filter(pr=>pr.partido_id===partido.id).forEach(pr=>{
+      if(!puntos[pr.email]) return;
+      const pl=parseInt(pr.local), pv=parseInt(pr.visit);
+      if(isNaN(pl)||isNaN(pv)) return;
+      const rp=pl>pv?'L':pv>pl?'V':'E';
+      if(pl===rl&&pv===rv){puntos[pr.email].total+=3; puntos[pr.email].exact++;}
+      else if(rp===rr) puntos[pr.email].total+=1;
+    });
+  });
+  if(campeonReal){
+    (prons||[]).filter(pr=>pr.partido_id===`campeon_${campeonReal}`).forEach(pr=>{
+      if(puntos[pr.email]){puntos[pr.email].total+=10; puntos[pr.email].campeon=true;}
+    });
+  }
+
+  // Obtener pronóstico de campeón de cada participante
+  const campProns = {};
+  (prons||[]).filter(pr=>pr.partido_id.startsWith('campeon_')).forEach(pr=>{
+    campProns[pr.email] = pr.partido_id.replace('campeon_','');
+  });
+
+  // Construir CSV con BOM para que Excel lo abra bien con tildes
+  const BOM = '﻿';
+  const headers = ['Nombre','Correo','Campeón Pronosticado','Puntos Totales','Marcadores Exactos','Acertó Campeón','Fecha Registro'];
+  const rows = parts.map(p=>{
+    const pts = puntos[p.email]||{total:0,exact:0,campeon:false};
+    const campeonPron = campProns[p.email] ? getPais(campProns[p.email]).n : 'Sin pronóstico';
+    const fechaReg = p.created_at ? new Date(p.created_at).toLocaleDateString('es-CO') : '';
+    return [
+      `"${p.nombre}"`,
+      `"${p.email}"`,
+      `"${campeonPron}"`,
+      pts.total,
+      pts.exact,
+      pts.campeon ? 'Sí' : 'No',
+      `"${fechaReg}"`
+    ].join(',');
+  });
+
+  const csv = BOM + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `participantes_polla_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  btn.disabled=false; btn.textContent='⬇️ Exportar Excel';
+  alert(`✅ Exportados ${parts.length} participantes.`);
+}
+
+function getPais(id){ return TODOS_PAISES.find(p=>p.id===id)||{id,n:id,f:'⚽'}; }
 
 async function eliminarParticipante(email, nombre){
   if(!confirm(`¿Eliminar a ${nombre} (${email}) del concurso?\n\nEsto borrará su registro y todos sus pronósticos.`)) return;
