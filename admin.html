@@ -546,65 +546,92 @@ async function exportarExcel(){
     return;
   }
 
-  // Calcular puntos por participante
+  // Puntos por participante
   const puntos = {};
-  parts.forEach(p=>{ puntos[p.email]={total:0, exact:0, campeon:false}; });
-
+  parts.forEach(p=>{ puntos[p.email]={total:0,exact:0,campeon:false}; });
   partidosDB.filter(p=>p.res_local!==null&&p.res_local!==undefined).forEach(partido=>{
-    const rl=partido.res_local, rv=partido.res_visit;
+    const rl=partido.res_local,rv=partido.res_visit;
     const rr=rl>rv?'L':rv>rl?'V':'E';
     (prons||[]).filter(pr=>pr.partido_id===partido.id).forEach(pr=>{
       if(!puntos[pr.email]) return;
-      const pl=parseInt(pr.local), pv=parseInt(pr.visit);
+      const pl=parseInt(pr.local),pv=parseInt(pr.visit);
       if(isNaN(pl)||isNaN(pv)) return;
       const rp=pl>pv?'L':pv>pl?'V':'E';
-      if(pl===rl&&pv===rv){puntos[pr.email].total+=3; puntos[pr.email].exact++;}
+      if(pl===rl&&pv===rv){puntos[pr.email].total+=3;puntos[pr.email].exact++;}
       else if(rp===rr) puntos[pr.email].total+=1;
     });
   });
   if(campeonReal){
     (prons||[]).filter(pr=>pr.partido_id===`campeon_${campeonReal}`).forEach(pr=>{
-      if(puntos[pr.email]){puntos[pr.email].total+=10; puntos[pr.email].campeon=true;}
+      if(puntos[pr.email]){puntos[pr.email].total+=10;puntos[pr.email].campeon=true;}
     });
   }
 
-  // Obtener pronóstico de campeón de cada participante
-  const campProns = {};
+  // Pronóstico campeón por participante
+  const campProns={};
   (prons||[]).filter(pr=>pr.partido_id.startsWith('campeon_')).forEach(pr=>{
-    campProns[pr.email] = pr.partido_id.replace('campeon_','');
+    campProns[pr.email]=pr.partido_id.replace('campeon_','');
   });
 
-  // Construir CSV con BOM para que Excel lo abra bien con tildes
-  const BOM = '﻿';
-  const headers = ['Nombre','Correo','Campeón Pronosticado','Puntos Totales','Marcadores Exactos','Acertó Campeón','Fecha Registro'];
-  const rows = parts.map(p=>{
-    const pts = puntos[p.email]||{total:0,exact:0,campeon:false};
-    const campeonPron = campProns[p.email] ? getPais(campProns[p.email]).n : 'Sin pronóstico';
-    const fechaReg = p.created_at ? new Date(p.created_at).toLocaleDateString('es-CO') : '';
+  // Grupos bloqueados por participante
+  const gruposBloqMap={};
+  parts.forEach(p=>{ gruposBloqMap[p.email]=[]; });
+  (prons||[]).filter(pr=>pr.partido_id.startsWith('grupo_bloqueado_')).forEach(pr=>{
+    const letra=pr.partido_id.replace('grupo_bloqueado_','');
+    if(gruposBloqMap[pr.email]) gruposBloqMap[pr.email].push(letra);
+  });
+
+  // Grupos con al menos un pronóstico ingresado
+  const gruposConPronMap={};
+  parts.forEach(p=>{ gruposConPronMap[p.email]=new Set(); });
+  (prons||[]).filter(pr=>!pr.partido_id.startsWith('grupo_bloqueado_')&&!pr.partido_id.startsWith('campeon')).forEach(pr=>{
+    const partido=partidosDB.find(p=>p.id===pr.partido_id);
+    if(partido&&partido.grupo&&gruposConPronMap[pr.email]) gruposConPronMap[pr.email].add(partido.grupo);
+  });
+
+  const LETRAS=['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+  // Construir CSV
+  const BOM='﻿';
+  const headers=[
+    'Nombre','Correo','Campeón Pronosticado',
+    'Puntos Totales','Exactos','Acertó Campeón',
+    'Grupos Guardados','Grupos Pendientes',
+    ...LETRAS.map(l=>`Grupo ${l}`),
+    'Fecha Registro'
+  ];
+
+  const rows=parts.map(p=>{
+    const pts=puntos[p.email]||{total:0,exact:0,campeon:false};
+    const campPron=campProns[p.email]?getPais(campProns[p.email]).n:'Sin pronóstico';
+    const fecha=p.created_at?new Date(p.created_at).toLocaleDateString('es-CO'):'';
+    const bloq=gruposBloqMap[p.email]||[];
+    const conPron=gruposConPronMap[p.email]||new Set();
+    const estadoGrupos=LETRAS.map(l=>{
+      if(bloq.includes(l)) return '"Guardado"';
+      if(conPron.has(l)) return '"Incompleto"';
+      return '"Pendiente"';
+    });
     return [
-      `"${p.nombre}"`,
-      `"${p.email}"`,
-      `"${campeonPron}"`,
-      pts.total,
-      pts.exact,
-      pts.campeon ? 'Sí' : 'No',
-      `"${fechaReg}"`
+      `"${p.nombre}"`,`"${p.email}"`,`"${campPron}"`,
+      pts.total,pts.exact,pts.campeon?'Si':'No',
+      bloq.length,LETRAS.length-bloq.length,
+      ...estadoGrupos,
+      `"${fecha}"`
     ].join(',');
   });
 
-  const csv = BOM + headers.join(',') + '\n' + rows.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `participantes_polla_${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
+  const csv=BOM+headers.join(',')+'
+'+rows.join('
+');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`participantes_polla_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
   btn.disabled=false; btn.textContent='⬇️ Exportar Excel';
-  alert(`✅ Exportados ${parts.length} participantes.`);
+  alert(`Exportados ${parts.length} participantes correctamente.`);
 }
 
 function getPais(id){ return TODOS_PAISES.find(p=>p.id===id)||{id,n:id,f:'⚽'}; }
