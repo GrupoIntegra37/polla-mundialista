@@ -265,18 +265,18 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const GRUPOS_DATA = {
-  A: {paises:[{id:'MEX',n:'México',f:'🇲🇽'},{id:'USA',n:'Estados Unidos',f:'🇺🇸'},{id:'CAN',n:'Canadá',f:'🇨🇦'},{id:'SLO',n:'Eslovenia',f:'🇸🇮'}]},
-  B: {paises:[{id:'ARG',n:'Argentina',f:'🇦🇷'},{id:'COL',n:'Colombia',f:'🇨🇴'},{id:'ECU',n:'Ecuador',f:'🇪🇨'},{id:'CHI',n:'Chile',f:'🇨🇱'}]},
-  C: {paises:[{id:'BRA',n:'Brasil',f:'🇧🇷'},{id:'URU',n:'Uruguay',f:'🇺🇾'},{id:'PAR',n:'Paraguay',f:'🇵🇾'},{id:'VEN',n:'Venezuela',f:'🇻🇪'}]},
-  D: {paises:[{id:'ENG',n:'Inglaterra',f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},{id:'GER',n:'Alemania',f:'🇩🇪'},{id:'NED',n:'Países Bajos',f:'🇳🇱'},{id:'DEN',n:'Dinamarca',f:'🇩🇰'}]},
-  E: {paises:[{id:'FRA',n:'Francia',f:'🇫🇷'},{id:'BEL',n:'Bélgica',f:'🇧🇪'},{id:'SWI',n:'Suiza',f:'🇨🇭'},{id:'SCO',n:'Escocia',f:'🏴󠁧󠁢󠁳󠁣󠁴󠁿'}]},
-  F: {paises:[{id:'ESP',n:'España',f:'🇪🇸'},{id:'POR',n:'Portugal',f:'🇵🇹'},{id:'TUR',n:'Turquía',f:'🇹🇷'},{id:'GEO',n:'Georgia',f:'🇬🇪'}]},
-  G: {paises:[{id:'MOR',n:'Marruecos',f:'🇲🇦'},{id:'SEN',n:'Senegal',f:'🇸🇳'},{id:'EGY',n:'Egipto',f:'🇪🇬'},{id:'CMR',n:'Camerún',f:'🇨🇲'}]},
-  H: {paises:[{id:'JPN',n:'Japón',f:'🇯🇵'},{id:'KOR',n:'Corea del Sur',f:'🇰🇷'},{id:'AUS',n:'Australia',f:'🇦🇺'},{id:'IRQ',n:'Irak',f:'🇮🇶'}]},
-  I: {paises:[{id:'SER',n:'Serbia',f:'🇷🇸'},{id:'CRO',n:'Croacia',f:'🇭🇷'},{id:'UKR',n:'Ucrania',f:'🇺🇦'},{id:'ALB',n:'Albania',f:'🇦🇱'}]},
-  J: {paises:[{id:'SAU',n:'Arabia Saudita',f:'🇸🇦'},{id:'IRN',n:'Irán',f:'🇮🇷'},{id:'UZB',n:'Uzbekistán',f:'🇺🇿'},{id:'KAZ',n:'Kazajistán',f:'🇰🇿'}]},
-  K: {paises:[{id:'NIG',n:'Nigeria',f:'🇳🇬'},{id:'GHA',n:'Ghana',f:'🇬🇭'},{id:'CIV',n:'Costa de Marfil',f:'🇨🇮'},{id:'TAN',n:'Tanzania',f:'🇹🇿'}]},
-  L: {paises:[{id:'MEX2',n:'Rep. Dominicana',f:'🇩🇴'},{id:'PAN',n:'Panamá',f:'🇵🇦'},{id:'HON',n:'Honduras',f:'🇭🇳'},{id:'JAM',n:'Jamaica',f:'🇯🇲'}]}
+  A: {paises:[{id:'MEX',n:'México',f:'🇲🇽'},{id:'SAF',n:'Sudáfrica',f:'🇿🇦'},{id:'KOR',n:'Corea del Sur',f:'🇰🇷'},{id:'CZE',n:'Chequia',f:'🇨🇿'}]},
+  B: {paises:[{id:'CAN',n:'Canadá',f:'🇨🇦'},{id:'BIH',n:'Bosnia y Herzegovina',f:'🇧🇦'},{id:'QAT',n:'Catar',f:'🇶🇦'},{id:'SWI',n:'Suiza',f:'🇨🇭'}]},
+  C: {paises:[{id:'BRA',n:'Brasil',f:'🇧🇷'},{id:'MOR',n:'Marruecos',f:'🇲🇦'},{id:'HAI',n:'Haití',f:'🇭🇹'},{id:'SCO',n:'Escocia',f:'🏴󠁧󠁢󠁳󠁣󠁴󠁿'}]},
+  D: {paises:[{id:'USA',n:'Estados Unidos',f:'🇺🇸'},{id:'PAR',n:'Paraguay',f:'🇵🇾'},{id:'AUS',n:'Australia',f:'🇦🇺'},{id:'TUR',n:'Turquía',f:'🇹🇷'}]},
+  E: {paises:[{id:'GER',n:'Alemania',f:'🇩🇪'},{id:'CUW',n:'Curazao',f:'🇨🇼'},{id:'CIV',n:'Costa de Marfil',f:'🇨🇮'},{id:'ECU',n:'Ecuador',f:'🇪🇨'}]},
+  F: {paises:[{id:'NED',n:'Países Bajos',f:'🇳🇱'},{id:'JPN',n:'Japón',f:'🇯🇵'},{id:'SWE',n:'Suecia',f:'🇸🇪'},{id:'TUN',n:'Túnez',f:'🇹🇳'}]},
+  G: {paises:[{id:'BEL',n:'Bélgica',f:'🇧🇪'},{id:'EGY',n:'Egipto',f:'🇪🇬'},{id:'IRN',n:'Irán',f:'🇮🇷'},{id:'NZL',n:'Nueva Zelanda',f:'🇳🇿'}]},
+  H: {paises:[{id:'ESP',n:'España',f:'🇪🇸'},{id:'CPV',n:'Cabo Verde',f:'🇨🇻'},{id:'SAU',n:'Arabia Saudita',f:'🇸🇦'},{id:'URU',n:'Uruguay',f:'🇺🇾'}]},
+  I: {paises:[{id:'FRA',n:'Francia',f:'🇫🇷'},{id:'SEN',n:'Senegal',f:'🇸🇳'},{id:'IRQ',n:'Irak',f:'🇮🇶'},{id:'NOR',n:'Noruega',f:'🇳🇴'}]},
+  J: {paises:[{id:'ARG',n:'Argentina',f:'🇦🇷'},{id:'ALG',n:'Argelia',f:'🇩🇿'},{id:'AUT',n:'Austria',f:'🇦🇹'},{id:'JOR',n:'Jordania',f:'🇯🇴'}]},
+  K: {paises:[{id:'POR',n:'Portugal',f:'🇵🇹'},{id:'COD',n:'RD Congo',f:'🇨🇩'},{id:'UZB',n:'Uzbekistán',f:'🇺🇿'},{id:'COL',n:'Colombia',f:'🇨🇴'}]},
+  L: {paises:[{id:'ENG',n:'Inglaterra',f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},{id:'CRO',n:'Croacia',f:'🇭🇷'},{id:'GHA',n:'Ghana',f:'🇬🇭'},{id:'PAN',n:'Panamá',f:'🇵🇦'}]}
 };
 
 const PARTIDOS_GRUPOS = [
