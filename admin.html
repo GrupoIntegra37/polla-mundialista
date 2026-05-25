@@ -425,8 +425,9 @@ async function renderParticipantes(filtro=''){
   }
   cont.innerHTML=buscadorHtml+filtrados.map(p=>`<div class="part-row">
     <div><div class="part-name">${p.nombre}</div><div class="part-meta">${p.email}</div></div>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px">
       <span style="font-size:11px;color:var(--g400)">${p.created_at?new Date(p.created_at).toLocaleDateString('es-CO'):''}</span>
+      <button class="btn-sm" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;padding:4px 10px;font-size:12px" onclick="editarNombre('${p.email}','${p.nombre}')">✏️ Editar</button>
       <button class="btn-sm" style="background:#FFEBEB;color:#C0001A;border:1px solid #FFCDD2;padding:4px 10px;font-size:12px" onclick="eliminarParticipante('${p.email}','${p.nombre}')">Eliminar</button>
     </div>
   </div>`).join('');
@@ -633,6 +634,22 @@ async function exportarExcel(){
 }
 
 function getPais(id){ return TODOS_PAISES.find(p=>p.id===id)||{id,n:id,f:'⚽'}; }
+
+async function editarNombre(email, nombreActual){
+  const nuevoNombre = prompt(`Editar nombre de:\n${email}\n\nNombre actual: "${nombreActual}"\n\nIngresa el nuevo nombre:`, nombreActual);
+  if(!nuevoNombre || nuevoNombre.trim() === '') return;
+  if(nuevoNombre.trim() === nombreActual){
+    alert('El nombre no cambió.');
+    return;
+  }
+  const {error} = await sb.from('participantes').update({nombre: nuevoNombre.trim()}).eq('email', email);
+  if(error){ alert('Error al actualizar: ' + error.message); return; }
+  // Actualizar en memoria local
+  const p = participantesDB.find(x=>x.email===email);
+  if(p) p.nombre = nuevoNombre.trim();
+  alert(`✅ Nombre actualizado correctamente.\n\nAntes: "${nombreActual}"\nAhora: "${nuevoNombre.trim()}"`);
+  renderParticipantes(document.getElementById('buscador-participantes')?.value||'');
+}
 
 async function eliminarParticipante(email, nombre){
   if(!confirm(`¿Eliminar a ${nombre} (${email}) del concurso?\n\nEsto borrará su registro y todos sus pronósticos.`)) return;
