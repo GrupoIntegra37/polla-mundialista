@@ -525,8 +525,8 @@ async function renderMiniPerfil(){
   const puntos = calcularPuntosUsuario();
   
   // Obtener posición en la tabla
-  const {data:parts} = await sb.from('participantes').select('email');
-  const {data:prons} = await sb.from('pronosticos').select('*');
+  const {data:parts} = await sb.from('participantes').select('email').limit(500);
+  const {data:prons} = await sb.from('pronosticos').select('*').limit(5000);
   const {data:campDB} = await sb.from('campeon').select('real').eq('id',1).single();
   const campeonReal = campDB?.real||null;
   
