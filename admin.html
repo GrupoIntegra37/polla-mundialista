@@ -551,11 +551,11 @@ async function exportarExcel(){
   const puntos = {};
   parts.forEach(p=>{ puntos[p.email]={total:0,exact:0,campeon:false}; });
   partidosDB.filter(p=>p.res_local!==null&&p.res_local!==undefined).forEach(partido=>{
-    const rl=partido.res_local,rv=partido.res_visit;
+    const rl=Number(partido.res_local),rv=Number(partido.res_visit);
     const rr=rl>rv?'L':rv>rl?'V':'E';
     (prons||[]).filter(pr=>pr.partido_id===partido.id).forEach(pr=>{
       if(!puntos[pr.email]) return;
-      const pl=parseInt(pr.local),pv=parseInt(pr.visit);
+      const pl=Number(pr.local),pv=Number(pr.visit);
       if(isNaN(pl)||isNaN(pv)) return;
       const rp=pl>pv?'L':pv>pl?'V':'E';
       if(pl===rl&&pv===rv){puntos[pr.email].total+=3;puntos[pr.email].exact++;}
