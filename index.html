@@ -718,11 +718,9 @@ function tiempoParaBloqueo(partido){
 }
 
 function grupoBloqueadoPorHora(letra){
-  // El grupo se bloquea si el PRIMER partido del grupo ya alcanzó su tiempo de bloqueo
-  const partidos = partidosDB.filter(p=>p.grupo===letra);
-  if(partidos.length===0) return false;
-  // Ordenar por fecha/hora y revisar el primero
-  return partidos.some(p => estaPartidoBloqueadoPorHora(p));
+  // El grupo NUNCA se bloquea completo por hora — cada partido se bloquea individualmente
+  // El bloqueo de grupo solo ocurre cuando el usuario guarda manualmente (gruposBloqueados)
+  return false;
 }
 
 function renderGrupos(){
@@ -733,8 +731,7 @@ function renderGrupos(){
 function renderGrupoCard(letra){
   const grupo = GRUPOS_DATA[letra];
   const bloqueadoManual = gruposBloqueados.includes(letra);
-  const bloqueadoHora = grupoBloqueadoPorHora(letra);
-  const bloqueado = bloqueadoManual || bloqueadoHora;
+  const bloqueado = bloqueadoManual; // Solo se bloquea si el usuario guardó manualmente
   const partidos = partidosDB.filter(p=>p.grupo===letra);
   const tieneAlgunPron = partidos.some(p=>pronosticos[p.id]);
 
@@ -747,13 +744,19 @@ function renderGrupoCard(letra){
     return pron.local!==undefined&&pron.local!==null&&pron.visit!==undefined&&pron.visit!==null;
   }).length;
 
+  // Contar partidos disponibles (no bloqueados por hora)
+  const partidosDisponibles = partidos.filter(p => !estaPartidoBloqueadoPorHora(p) && p.res_local===null).length;
+  const partidosBloqHora = partidos.filter(p => estaPartidoBloqueadoPorHora(p) || (p.res_local!==null&&p.res_local!==undefined)).length;
+
   let statusHtml = '';
   if(bloqueado){
     statusHtml = '<span class="badge-guardado">🔒 Cerrado</span>';
   } else if(completados===totalPartidos && totalPartidos>0){
-    statusHtml = `<span class="badge-guardado">✓ ${completados}/${totalPartidos} completos</span>`;
+    statusHtml = `<span class="badge-guardado">✓ ${completados}/${totalPartidos} pronósticos</span>`;
   } else if(completados>0){
-    statusHtml = `<span class="badge-pendiente">${completados}/${totalPartidos} pronósticos</span>`;
+    statusHtml = `<span class="badge-pendiente">${completados}/${totalPartidos} guardados</span>`;
+  } else if(partidosBloqHora===totalPartidos){
+    statusHtml = '<span class="badge-guardado">🔒 Fase cerrada</span>';
   }
 
   // Mensaje de cierre próximo (si falta menos de 24h para el primer partido)
@@ -782,10 +785,8 @@ function renderGrupoCard(letra){
       ${cierreProximo}
       ${renderPartidosGrupo(letra, bloqueado)}
       ${!bloqueado
-        ? `<button class="btn-guardar-grupo" onclick="pedirConfirmacion('${letra}')">Guardar pronósticos del Grupo ${letra}</button>`
-        : bloqueadoHora && !bloqueadoManual
-          ? '<div class="msg warning" style="margin-top:12px">🔒 Pronósticos cerrados automáticamente — el partido está por comenzar</div>'
-          : '<div class="msg success" style="margin-top:12px">✓ Pronósticos guardados y bloqueados</div>'
+        ? `<button class="btn-guardar-grupo" onclick="pedirConfirmacion('${letra}')">💾 Guardar pronósticos del Grupo ${letra}</button>`
+        : '<div class="msg success" style="margin-top:12px">✓ Pronósticos guardados y bloqueados</div>'
       }
     </div>
   </div>`;
@@ -872,11 +873,52 @@ function toggleGrupo(letra){
 
 let grupoConfirmando = null;
 function pedirConfirmacion(letra){
-  grupoConfirmando = letra;
-  document.getElementById('modal-confirm-btn').onclick = ()=>confirmarGuardarGrupo(letra);
-  document.getElementById('modal-guardar').style.display='flex';
+  // Opción B: guardar sin bloquear permanentemente
+  guardarSinBloquear(letra);
 }
 function cerrarModal(){ document.getElementById('modal-guardar').style.display='none'; grupoConfirmando=null; }
+
+async function guardarSinBloquear(letra){
+  // Guarda los pronósticos sin bloquear el grupo
+  // El bloqueo de cada partido ocurre automáticamente 30 min antes por hora
+  const partidos = partidosDB.filter(p=>p.grupo===letra);
+  const upserts = [];
+
+  partidos.forEach(p=>{
+    // Solo guardar partidos que no estén bloqueados por hora
+    if(estaPartidoBloqueadoPorHora(p)) return;
+    const l=document.getElementById(`sc_${p.id}_l`);
+    const v=document.getElementById(`sc_${p.id}_v`);
+    if(!l||!v||l.value===''||v.value==='') return; // saltar vacíos sin error
+    pronosticos[p.id]={local:parseInt(l.value), visit:parseInt(v.value)};
+    upserts.push({email:currentUser.email, partido_id:p.id, local:parseInt(l.value), visit:parseInt(v.value)});
+  });
+
+  if(upserts.length>0){
+    await sb.from('pronosticos').upsert(upserts,{onConflict:'email,partido_id'});
+  }
+
+  // Mostrar confirmación breve sin bloquear
+  const btn = document.querySelector(`[onclick="pedirConfirmacion('${letra}')"]`);
+  if(btn){
+    const original = btn.textContent;
+    btn.textContent = '✓ Guardado';
+    btn.style.background = '#2E7D32';
+    setTimeout(()=>{
+      btn.textContent = original;
+      btn.style.background = '';
+    }, 2000);
+  }
+
+  // Re-renderizar para actualizar indicadores visuales
+  renderGrupos();
+  // Re-abrir el grupo que estaba abierto
+  setTimeout(()=>{
+    const body = document.getElementById(`grupo-body-${letra}`);
+    const chev = document.getElementById(`chevron-${letra}`);
+    if(body){ body.classList.add('open'); if(chev) chev.classList.add('open'); }
+  }, 50);
+}
 
 async function confirmarGuardarGrupo(letra){
   cerrarModal();
