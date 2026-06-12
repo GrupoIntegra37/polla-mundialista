@@ -403,7 +403,7 @@ let participantesDB = [];
 async function renderParticipantes(filtro=''){
   if(!filtro){
     // Solo recarga de DB si no hay filtro activo
-    const {data}=await sb.from('participantes').select('*').order('created_at',{ascending:false});
+    const {data}=await sb.from('participantes').select('*').order('created_at',{ascending:false}).limit(500);
     participantesDB = data||[];
   }
   const cont=document.getElementById('participantes-list');
@@ -536,8 +536,8 @@ async function exportarExcel(){
   const btn = document.querySelector('[onclick="exportarExcel()"]');
   btn.disabled=true; btn.textContent='Generando...';
 
-  const {data:parts} = await sb.from('participantes').select('*').order('nombre',{ascending:true});
-  const {data:prons} = await sb.from('pronosticos').select('*');
+  const {data:parts} = await sb.from('participantes').select('*').order('nombre',{ascending:true}).limit(500);
+  const {data:prons} = await sb.from('pronosticos').select('*').limit(5000);
   const campDB = await sb.from('campeon').select('real').eq('id',1).single();
   const campeonReal = campDB?.data?.real||null;
 
@@ -739,10 +739,10 @@ async function renderTablaAdmin(){
   const cont=document.getElementById('tabla-admin-container');
   cont.innerHTML='<div class="loading"><div class="spinner"></div>Calculando...</div>';
   const [{data:parts},{data:prons},{data:campDB},{data:partsDB}]=await Promise.all([
-    sb.from('participantes').select('*'),
-    sb.from('pronosticos').select('*'),
+    sb.from('participantes').select('*').limit(500),
+    sb.from('pronosticos').select('*').limit(5000),
     sb.from('campeon').select('real').eq('id',1).single(),
-    sb.from('partidos').select('*')
+    sb.from('partidos').select('*').limit(500)
   ]);
   const campeonReal=campDB?.real||null;
   const puntos={};
