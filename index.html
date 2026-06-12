@@ -1038,9 +1038,17 @@ async function renderTabla(){
   const cont = document.getElementById('tabla-container');
   cont.innerHTML='<div class="loading"><div class="spinner"></div>Calculando...</div>';
 
-  const {data:parts} = await sb.from('participantes').select('*');
-  const {data:prons} = await sb.from('pronosticos').select('*');
-  const {data:campDB} = await sb.from('campeon').select('real').eq('id',1).single();
+  // Cargar SIEMPRE datos frescos desde Supabase para evitar caché desactualizado
+  const [{data:parts},{data:prons},{data:campDB},{data:partidosFrescos}] = await Promise.all([
+    sb.from('participantes').select('*'),
+    sb.from('pronosticos').select('*'),
+    sb.from('campeon').select('real').eq('id',1).single(),
+    sb.from('partidos').select('*')
+  ]);
+
+  // Actualizar partidosDB local con datos frescos
+  if(partidosFrescos && partidosFrescos.length > 0) partidosDB = partidosFrescos;
+
   const campeonReal = campDB?.real||null;
 
   const puntos={};
