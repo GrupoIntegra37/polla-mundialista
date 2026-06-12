@@ -1039,11 +1039,12 @@ async function renderTabla(){
   cont.innerHTML='<div class="loading"><div class="spinner"></div>Calculando...</div>';
 
   // Cargar SIEMPRE datos frescos desde Supabase para evitar caché desactualizado
+  // Nota: limit(5000) para evitar el límite por defecto de 1000 filas de Supabase
   const [{data:parts},{data:prons},{data:campDB},{data:partidosFrescos}] = await Promise.all([
-    sb.from('participantes').select('*'),
-    sb.from('pronosticos').select('*'),
+    sb.from('participantes').select('*').limit(500),
+    sb.from('pronosticos').select('*').limit(5000),
     sb.from('campeon').select('real').eq('id',1).single(),
-    sb.from('partidos').select('*')
+    sb.from('partidos').select('*').limit(500)
   ]);
 
   // Actualizar partidosDB local con datos frescos
