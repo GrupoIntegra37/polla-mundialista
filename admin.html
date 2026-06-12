@@ -537,7 +537,11 @@ async function exportarExcel(){
   btn.disabled=true; btn.textContent='Generando...';
 
   const {data:parts} = await sb.from('participantes').select('*').order('nombre',{ascending:true}).limit(500);
-  const {data:prons} = await sb.from('pronosticos').select('*').limit(5000);
+  let prons=[];let _ep=0;
+  while(true){
+    const{data:_ec}=await sb.from('pronosticos').select('*').range(_ep*1000,(_ep+1)*1000-1);
+    if(!_ec||!_ec.length)break;prons=prons.concat(_ec);if(_ec.length<1000)break;_ep++;
+  }
   const campDB = await sb.from('campeon').select('real').eq('id',1).single();
   const campeonReal = campDB?.data?.real||null;
 
@@ -738,12 +742,17 @@ async function subirLogo(input){
 async function renderTablaAdmin(){
   const cont=document.getElementById('tabla-admin-container');
   cont.innerHTML='<div class="loading"><div class="spinner"></div>Calculando...</div>';
-  const [{data:parts},{data:prons},{data:campDB},{data:partsDB}]=await Promise.all([
+  const [{data:parts},{data:campDB},{data:partsDB}]=await Promise.all([
     sb.from('participantes').select('*').limit(500),
-    sb.from('pronosticos').select('*').limit(5000),
     sb.from('campeon').select('real').eq('id',1).single(),
     sb.from('partidos').select('*').limit(500)
   ]);
+  // Paginación para traer todos los pronósticos
+  let prons=[];let _ap=0;
+  while(true){
+    const{data:_ac}=await sb.from('pronosticos').select('*').range(_ap*1000,(_ap+1)*1000-1);
+    if(!_ac||!_ac.length)break;prons=prons.concat(_ac);if(_ac.length<1000)break;_ap++;
+  }
   const campeonReal=campDB?.real||null;
   const puntos={};
   (parts||[]).forEach(p=>{puntos[p.email]={nombre:p.nombre,agencia:p.agencia,total:0,exact:0,campeon:false};});
