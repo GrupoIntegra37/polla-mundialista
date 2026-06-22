@@ -439,7 +439,12 @@ const FASES_ADMIN=[
   {id:'grupos_D',label:'Grupo D'},{id:'grupos_E',label:'Grupo E'},{id:'grupos_F',label:'Grupo F'},
   {id:'grupos_G',label:'Grupo G'},{id:'grupos_H',label:'Grupo H'},{id:'grupos_I',label:'Grupo I'},
   {id:'grupos_J',label:'Grupo J'},{id:'grupos_K',label:'Grupo K'},{id:'grupos_L',label:'Grupo L'},
-  {id:'octavos',label:'Octavos'},{id:'cuartos',label:'Cuartos'},{id:'semifinal',label:'Semifinal'},{id:'final',label:'Final'}
+  {id:'dieciseisavos',label:'16avos'},
+  {id:'octavos',label:'Octavos'},
+  {id:'cuartos',label:'Cuartos'},
+  {id:'semifinal',label:'Semifinal'},
+  {id:'tercer_puesto',label:'3er Puesto'},
+  {id:'final',label:'Final'}
 ];
 
 function renderFaseTabsAdmin(){
@@ -461,6 +466,8 @@ function renderPartidosAdmin(){
   } else {
     partidos=partidosDB.filter(p=>p.fase===currentAdminFase);
   }
+  // dieciseisavos siempre es elim
+  const esDieciseisavos = currentAdminFase === 'dieciseisavos';
   const cont=document.getElementById('partidos-admin-list');
   if(!partidos||partidos.length===0){cont.innerHTML='<div class="msg info">No hay partidos en esta fase.</div>';return;}
 
