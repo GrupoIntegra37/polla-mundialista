@@ -500,6 +500,12 @@ async function doLogin(){
     currentUser={email, nombre, agencia:''};
   }
 
+  // Registrar ingreso
+  await sb.from('ingresos').upsert(
+    {email: currentUser.email, nombre: currentUser.nombre, ultimo_ingreso: new Date().toISOString()},
+    {onConflict: 'email'}
+  );
+
   await cargarConfig();
   await cargarPartidos();
   await cargarPronosticos();
