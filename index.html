@@ -226,16 +226,27 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
         <div class="card-title">🏆 Pronóstico Campeón Mundial</div>
         <div id="campeon-block"></div>
       </div>
-      <!-- Grupos -->
-      <div class="card">
-        <div class="card-title">⚽ Fase de Grupos — selecciona cada grupo para ingresar tus pronósticos</div>
-        <div id="grupos-container"><div class="loading"><div class="spinner"></div>Cargando partidos...</div></div>
+      <!-- Sub-tabs: Grupos / Eliminatorias -->
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-200);margin-bottom:16px">
+        <button id="subtab-grupos" onclick="setSubTab('grupos')" style="padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:none;border-bottom:3px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif">⚽ Grupos</button>
+        <button id="subtab-elim" onclick="setSubTab('elim')" style="padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--g400);font-family:'DM Sans',sans-serif">🏆 Eliminatorias</button>
       </div>
+
+      <!-- Grupos -->
+      <div id="subpane-grupos">
+        <div class="card">
+          <div class="card-title">⚽ Fase de Grupos — selecciona cada grupo para ingresar tus pronósticos</div>
+          <div id="grupos-container"><div class="loading"><div class="spinner"></div>Cargando partidos...</div></div>
+        </div>
+      </div>
+
       <!-- Eliminatorias -->
-      <div class="card" id="card-elim" style="display:none">
-        <div class="card-title">🏟️ Eliminatorias</div>
-        <div class="fase-tabs" id="fase-tabs-elim"></div>
-        <div id="elim-container"></div>
+      <div id="subpane-elim" style="display:none">
+        <div class="card" id="card-elim">
+          <div class="card-title">🏟️ Eliminatorias</div>
+          <div class="fase-tabs" id="fase-tabs-elim" style="margin-bottom:16px"></div>
+          <div id="elim-container"></div>
+        </div>
       </div>
     </div>
 
@@ -915,6 +926,39 @@ function pedirConfirmacion(letra){
 }
 function cerrarModal(){ document.getElementById('modal-guardar').style.display='none'; grupoConfirmando=null; }
 
+async function guardarElimPartido(partidoId){
+  const l = document.getElementById(`sc_${partidoId}_l`);
+  const v = document.getElementById(`sc_${partidoId}_v`);
+  if(!l||!v||l.value===''||v.value===''){
+    alert('Ingresa ambos marcadores antes de guardar.');
+    return;
+  }
+  const local = parseInt(l.value);
+  const visit = parseInt(v.value);
+  const {error} = await sb.from('pronosticos').upsert(
+    {email: currentUser.email, partido_id: partidoId, local, visit},
+    {onConflict: 'email,partido_id'}
+  );
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  pronosticos[partidoId] = {local, visit};
+
+  // Feedback visual
+  const btn = document.querySelector(`button[onclick="guardarElimPartido('${partidoId}')"]`);
+  if(btn){
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Guardado';
+    btn.style.background = '#2E7D32';
+    setTimeout(()=>{ btn.innerHTML = '💾 Actualizar'; btn.style.background = 'var(--red)'; }, 2000);
+  }
+  // Update status text
+  setElimFase(currentElimFase);
+}
+
+// Add elim-footer styles
+const elimStyle = document.createElement('style');
+elimStyle.textContent = '.elim-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:0.5px solid var(--gray-200);background:var(--gray-50)}';
+document.head.appendChild(elimStyle);
+
 async function guardarSinBloquear(letra){
   // Guarda los pronósticos sin bloquear el grupo
   // El bloqueo de cada partido ocurre automáticamente 30 min antes por hora
@@ -1001,11 +1045,30 @@ async function confirmarGuardarGrupo(letra){
 }
 
 // ═══ ELIMINATORIAS ═══
+function setSubTab(tab){
+  // Switch between Grupos and Eliminatorias sub-tabs
+  document.getElementById('subpane-grupos').style.display = tab==='grupos' ? 'block' : 'none';
+  document.getElementById('subpane-elim').style.display = tab==='elim' ? 'block' : 'none';
+
+  const btnG = document.getElementById('subtab-grupos');
+  const btnE = document.getElementById('subtab-elim');
+  if(tab==='grupos'){
+    btnG.style.borderBottom='3px solid var(--red)';btnG.style.color='var(--red)';btnG.style.fontWeight='600';
+    btnE.style.borderBottom='3px solid transparent';btnE.style.color='var(--g400)';btnE.style.fontWeight='500';
+  } else {
+    btnE.style.borderBottom='3px solid var(--red)';btnE.style.color='var(--red)';btnE.style.fontWeight='600';
+    btnG.style.borderBottom='3px solid transparent';btnG.style.color='var(--g400)';btnG.style.fontWeight='500';
+    renderElim();
+  }
+}
+
 function renderElim(){
   const fases = ['dieciseisavos','octavos','cuartos','semifinal','tercer_puesto','final'];
   const hayElim = partidosDB.some(p=>fases.includes(p.fase));
-  document.getElementById('card-elim').style.display = hayElim?'block':'none';
-  if(!hayElim) return;
+  if(!hayElim){
+    document.getElementById('elim-container').innerHTML='<div class="msg info">Las eliminatorias comenzarán pronto.</div>';
+    return;
+  }
 
   const labels = {
     dieciseisavos:'16avos de Final',
@@ -1037,36 +1100,59 @@ function setElimFase(fase){
     const tieneRes=p.res_local!==null&&p.res_local!==undefined;
     const bloqHora=estaPartidoBloqueadoPorHora(p);
     const bloq=p.bloqueado||tieneRes||bloqHora;
+    const tienePronostico=pron.local!==undefined&&pron.local!==null;
     let scoreHtml='';
+    let footerHtml='';
+
     if(bloq){
       const pl=pron.local!==null&&pron.local!==undefined?pron.local:'?';
       const pv=pron.visit!==null&&pron.visit!==undefined?pron.visit:'?';
       let resultTag='';
       if(tieneRes){
-        const rl=p.res_local,rv=p.res_visit;
+        const rl=Number(p.res_local),rv=Number(p.res_visit);
         const rr=rl>rv?'L':rv>rl?'V':'E';
-        const pl2=parseInt(pron.local),pv2=parseInt(pron.visit);
+        const pl2=Number(pron.local),pv2=Number(pron.visit);
         const rp=pl2>pv2?'L':pv2>pl2?'V':'E';
         if(pl2===rl&&pv2===rv) resultTag=`<div class="result-tag result-exact">🎯 Exacto +3</div>`;
         else if(rp===rr) resultTag=`<div class="result-tag result-ok">✓ Resultado +1</div>`;
         else resultTag=`<div class="result-tag result-fail">✗ Sin puntos</div>`;
         resultTag+=`<div class="result-real">${rl}–${rv}</div>`;
       }
-      const bloqTag=bloqHora&&!tieneRes?`<div style="font-size:10px;color:#E65100;margin-top:2px">🔒 Cerrado</div>`:'';
-      scoreHtml=`<div class="score-center"><div class="score-inputs"><div class="score-locked">${pl}</div><span class="score-sep">–</span><div class="score-locked">${pv}</div></div>${resultTag}${bloqTag}<div class="partido-fecha">${p.fecha} · ${p.hora}</div></div>`;
+      scoreHtml=`<div class="score-center">
+        <div class="score-display-row"><span class="score-box-locked">${pl}</span><span class="score-sep">–</span><span class="score-box-locked">${pv}</span></div>
+        ${resultTag}
+        <div class="match-time">${tieneRes?'':'🔒 Cerrado — '}${p.fecha} · ${p.hora}</div>
+      </div>`;
+      footerHtml=`<div class="elim-footer">
+        <span style="font-size:11px;color:var(--g400)">${tienePronostico?'✓ Pronóstico guardado':'Sin pronóstico'}</span>
+        <button style="background:var(--gray-100);color:var(--g400);border:0.5px solid var(--gray-200);padding:7px 14px;border-radius:6px;font-size:12px;cursor:default">🔒 Cerrado</button>
+      </div>`;
     } else {
-      const t=tiempoParaBloqueo(p);
-      const tiempoTag=t?`<div style="font-size:10px;color:${t.includes('min')?'#E65100':'#9E9E9E'};margin-top:2px">${t}</div>`:'';
-      scoreHtml=`<div class="score-center"><div class="score-inputs">
-        <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.local!==null&&pron.local!==undefined?pron.local:''}" id="sc_${p.id}_l" oninput="autoSaveElim('${p.id}')">
-        <span class="score-sep">–</span>
-        <input type="number" class="score-input" min="0" max="20" placeholder="0" value="${pron.visit!==null&&pron.visit!==undefined?pron.visit:''}" id="sc_${p.id}_v" oninput="autoSaveElim('${p.id}')">
-      </div>${tiempoTag}<div class="partido-fecha">${p.fecha} · ${p.hora}</div></div>`;
+      const vl=pron.local!==undefined?pron.local:'';
+      const vv=pron.visit!==undefined?pron.visit:'';
+      const tiempo=tiempoParaBloqueo(p);
+      scoreHtml=`<div class="score-center">
+        <div class="score-display-row">
+          <input type="number" min="0" max="99" value="${vl}" id="sc_${p.id}_l" class="score-input" style="width:44px;height:38px;text-align:center;font-size:16px">
+          <span class="score-sep">–</span>
+          <input type="number" min="0" max="99" value="${vv}" id="sc_${p.id}_v" class="score-input" style="width:44px;height:38px;text-align:center;font-size:16px">
+        </div>
+        <div class="match-time">${tiempo?`Cierra en ${tiempo} · `:''}${p.fecha} · ${p.hora}</div>
+      </div>`;
+      const btnLabel = tienePronostico ? '💾 Actualizar' : '💾 Guardar';
+      footerHtml=`<div class="elim-footer">
+        <span style="font-size:11px;color:var(--g400)">${tienePronostico?'✓ Pronóstico guardado':'Ingresa tu pronóstico'}</span>
+        <button onclick="guardarElimPartido('${p.id}')" style="background:var(--red);color:white;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">${btnLabel}</button>
+      </div>`;
     }
-    return `<div class="partido-row">
-      <div class="team-col"><span class="team-flag-lg">${lEq.f}</span><span class="team-name-sm">${lEq.n}</span></div>
-      ${scoreHtml}
-      <div class="team-col right"><span class="team-name-sm">${vEq.n}</span><span class="team-flag-lg">${vEq.f}</span></div>
+
+    return `<div class="match-card" style="border:0.5px solid var(--gray-200);border-radius:10px;margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px">
+        <div class="team-col left"><span class="team-flag-lg">${lEq.f}</span><span class="team-name-sm">${lEq.n}</span></div>
+        ${scoreHtml}
+        <div class="team-col right"><span class="team-name-sm">${vEq.n}</span><span class="team-flag-lg">${vEq.f}</span></div>
+      </div>
+      ${footerHtml}
     </div>`;
   }).join('');
 }
