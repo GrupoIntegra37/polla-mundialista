@@ -215,6 +215,13 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
       <button class="nav-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
+  <!-- Sub-nav: Grupos / Eliminatorias — solo visible en Pronósticos -->
+  <div id="subnav-bar" style="background:white;border-bottom:1px solid var(--gray-200);display:flex;gap:0;padding:0 20px">
+    <button id="subtab-grupos" onclick="setSubTab('grupos')" style="padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:none;border-bottom:3px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif">⚽ Grupos</button>
+    <button id="subtab-elim" onclick="setSubTab('elim')" style="padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--g400);font-family:'DM Sans',sans-serif">🏆 Eliminatorias</button>
+  </div>
+  <div class="fake-close">
+  </div>
   <div class="content">
 
     <!-- PRONÓSTICOS -->
@@ -226,11 +233,7 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
         <div class="card-title">🏆 Pronóstico Campeón Mundial</div>
         <div id="campeon-block"></div>
       </div>
-      <!-- Sub-tabs: Grupos / Eliminatorias -->
-      <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-200);margin-bottom:16px">
-        <button id="subtab-grupos" onclick="setSubTab('grupos')" style="padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:none;border-bottom:3px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif">⚽ Grupos</button>
-        <button id="subtab-elim" onclick="setSubTab('elim')" style="padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--g400);font-family:'DM Sans',sans-serif">🏆 Eliminatorias</button>
-      </div>
+
 
       <!-- Grupos -->
       <div id="subpane-grupos">
@@ -551,6 +554,9 @@ function setTab(tab){
   document.getElementById('pane-tabla').style.display = tab==='tabla'?'block':'none';
   document.getElementById('nav-pronosticos').classList.toggle('active', tab==='pronosticos');
   document.getElementById('nav-tabla').classList.toggle('active', tab==='tabla');
+  // Mostrar subnav solo en pronósticos
+  const subnav = document.getElementById('subnav-bar');
+  if(subnav) subnav.style.display = tab==='pronosticos' ? 'flex' : 'none';
   if(tab==='tabla') renderTabla();
   if(tab==='pronosticos') renderMiniPerfil();
 }
