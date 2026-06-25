@@ -215,17 +215,18 @@ body{font-family:'DM Sans',sans-serif;background:#F4F4F4;color:var(--gray-900);m
       <button class="nav-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
-  <!-- Sub-nav: Grupos / Eliminatorias — solo visible en Pronósticos -->
-  <div id="subnav-bar" style="background:white;border-bottom:1px solid var(--gray-200);display:flex;gap:0;padding:0 20px">
-    <button id="subtab-grupos" onclick="setSubTab('grupos')" style="padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:none;border-bottom:3px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif">⚽ Grupos</button>
-    <button id="subtab-elim" onclick="setSubTab('elim')" style="padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--g400);font-family:'DM Sans',sans-serif">🏆 Eliminatorias</button>
-  </div>
+
   <div class="fake-close">
   </div>
   <div class="content">
 
     <!-- PRONÓSTICOS -->
     <div id="pane-pronosticos">
+      <!-- Sub-nav: Grupos / Eliminatorias -->
+      <div id="subnav-bar" style="display:flex;gap:0;border-bottom:2px solid var(--gray-200);margin-bottom:20px">
+        <button id="subtab-grupos" onclick="setSubTab('grupos')" style="padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:none;border-bottom:3px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif;margin-bottom:-2px">⚽ Grupos</button>
+        <button id="subtab-elim" onclick="setSubTab('elim')" style="padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--g400);font-family:'DM Sans',sans-serif;margin-bottom:-2px">🏆 Eliminatorias</button>
+      </div>
       <!-- Mini perfil -->
       <div id="mini-perfil-block"></div>
       <!-- Campeón -->
