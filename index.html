@@ -1272,10 +1272,37 @@ async function renderTabla(){
         <td style="text-align:center"><span class="pts-pill">${p.total}</span></td></tr>`;
     }).join('')}</tbody></table>`;
 
-  // Guardar posiciones actuales para la próxima vez
-  const upserts = sorted.map((p,i)=>({email:p.email, posicion:i+1, updated_at:new Date().toISOString()}));
-  if(upserts.length>0){
-    await sb.from('posiciones_anteriores').upsert(upserts, {onConflict:'email'});
+  // Guardar posiciones SOLO si cambiaron los puntos de algún participante
+  // Comparamos puntos actuales con los guardados para detectar cambios reales
+  const {data:ptsGuardados} = await sb.from('posiciones_anteriores').select('email,posicion,puntos').limit(500);
+  const ptsGuardadosMap = {};
+  (ptsGuardados||[]).forEach(p=>{ ptsGuardadosMap[p.email]={posicion:p.posicion, puntos:p.puntos}; });
+
+  // Solo actualizar si hay cambios en puntos o si es primera vez
+  const upserts = sorted
+    .filter((p,i)=>{
+      const prev = ptsGuardadosMap[p.email];
+      // Actualizar si: nunca se guardó, o si los puntos cambiaron
+      return !prev || prev.puntos !== p.total;
+    })
+    .map((p,i)=>({email:p.email, posicion:posAntMap[p.email]||i+1, puntos:p.total, updated_at:new Date().toISOString()}));
+
+  // Siempre guardar la posición actual para nuevos participantes
+  const nuevos = sorted
+    .filter((p,i)=>!ptsGuardadosMap[p.email])
+    .map((p,i)=>({email:p.email, posicion:i+1, puntos:p.total, updated_at:new Date().toISOString()}));
+
+  // Cuando cambian los puntos, guardar la posición ANTERIOR (antes del cambio) para mostrar el movimiento
+  const conCambio = sorted
+    .filter((p,i)=>{
+      const prev = ptsGuardadosMap[p.email];
+      return prev && prev.puntos !== p.total;
+    })
+    .map((p,i)=>({email:p.email, posicion:ptsGuardadosMap[p.email]?.posicion||i+1, puntos:p.total, updated_at:new Date().toISOString()}));
+
+  const allUpserts = [...nuevos, ...conCambio];
+  if(allUpserts.length>0){
+    await sb.from('posiciones_anteriores').upsert(allUpserts, {onConflict:'email'});
   }
 }
 
