@@ -1233,16 +1233,50 @@ async function renderTabla(){
 
   if(sorted.length===0){cont.innerHTML='<div class="msg info">Aún no hay participantes registrados.</div>';return;}
 
+  // Cargar posiciones anteriores
+  const {data:posAnt} = await sb.from('posiciones_anteriores').select('email,posicion').limit(500);
+  const posAntMap = {};
+  (posAnt||[]).forEach(p=>{ posAntMap[p.email]=p.posicion; });
+
+  // Renderizar tabla con flechas
   cont.innerHTML=`<table class="tabla">
-    <thead><tr><th style="width:36px;text-align:center">#</th><th>Participante</th><th style="text-align:center">Exactos</th><th style="text-align:center">Puntos</th></tr></thead>
+    <thead><tr>
+      <th style="width:36px;text-align:center">#</th>
+      <th>Participante</th>
+      <th style="width:50px;text-align:center">Cambio</th>
+      <th style="text-align:center">Exactos</th>
+      <th style="text-align:center">Puntos</th>
+    </tr></thead>
     <tbody>${sorted.map((p,i)=>{
       const rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
       const esYo=p.email===currentUser.email;
-      return `<tr${esYo?' class="me"':''}><td><div class="rank-circle ${rc}">${i+1}</div></td>
+      const posActual=i+1;
+      const posPrevia=posAntMap[p.email];
+      let flechaHtml='';
+      if(posPrevia===undefined||posPrevia===null){
+        flechaHtml='<span style="color:var(--g400);font-size:11px">—</span>';
+      } else {
+        const diff=posPrevia-posActual;
+        if(diff>0){
+          flechaHtml=`<span style="color:#16A34A;font-size:12px;font-weight:600">▲${diff}</span>`;
+        } else if(diff<0){
+          flechaHtml=`<span style="color:#DC2626;font-size:12px;font-weight:600">▼${Math.abs(diff)}</span>`;
+        } else {
+          flechaHtml='<span style="color:var(--g400);font-size:14px">—</span>';
+        }
+      }
+      return `<tr${esYo?' class="me"':''}><td><div class="rank-circle ${rc}">${posActual}</div></td>
         <td><div style="font-weight:600">${p.nombre}${esYo?' <span style="font-size:11px;color:var(--red);font-weight:500">(tú)</span>':''}</div></td>
+        <td style="text-align:center">${flechaHtml}</td>
         <td style="text-align:center">${p.exact}🎯${p.campeon?'<span class="champ-star">★</span>':''}</td>
         <td style="text-align:center"><span class="pts-pill">${p.total}</span></td></tr>`;
     }).join('')}</tbody></table>`;
+
+  // Guardar posiciones actuales para la próxima vez
+  const upserts = sorted.map((p,i)=>({email:p.email, posicion:i+1, updated_at:new Date().toISOString()}));
+  if(upserts.length>0){
+    await sb.from('posiciones_anteriores').upsert(upserts, {onConflict:'email'});
+  }
 }
 
 // Cargar config al inicio
