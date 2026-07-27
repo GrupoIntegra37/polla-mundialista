@@ -498,6 +498,18 @@ async function doLogin(){
   }
   btn.disabled=true; btn.textContent='Verificando...';
 
+  // Verificar si la polla está activa
+  const {data:configCheck} = await sb.from('config').select('valor').eq('clave','polla_activa').maybeSingle();
+  if(configCheck && configCheck.valor === 'false'){
+    btn.disabled=false; btn.textContent='Ingresar';
+    msgEl.innerHTML=`<div class="msg error" style="text-align:center;padding:20px">
+      <div style="font-size:28px;margin-bottom:8px">🏆</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px">La Polla Mundialista 2026 ha finalizado</div>
+      <div style="font-size:13px">Gracias por tu participación. ¡Hasta la próxima!</div>
+    </div>`;
+    return;
+  }
+
   const {data:correos} = await sb.from('correos_habilitados').select('email').eq('email',email);
   if(!correos||correos.length===0){
     msgEl.innerHTML='<div class="msg error">Tu correo no está habilitado. Contacta al administrador.</div>';
